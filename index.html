@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Admin Pro - Edit & Sync Master</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Firebase & XLSX SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root { --primary: #0f9d58; --bg: #f1f3f4; --border: #bdc1c6; --selected: rgba(26, 115, 232, 0.2); }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-weight: 700; }
+        body { background: var(--bg); padding: 5px; transition: 0.3s; }
+        
+        body.desktop-mode { min-width: 1250px; overflow-x: auto; }
+
+        header { background: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* টুলবার সেকশন */
+        .toolbar-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .tool-box { background: white; padding: 8px; border-radius: 8px; border: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex: 1; min-width: 300px; }
+        .input-f { padding: 5px 8px; font-size: 11px; border: 1px solid #ddd; border-radius: 4px; outline: none; background: #fafafa; }
+        .bulk-area { flex: 1; height: 32px; resize: none; }
+        
+        .collect-section { background: #fff; border-left: 4px solid #4f46e5; }
+        .num-input { width: 45px; text-align: center; }
+        .pool-counter { font-size: 11px; color: #fff; background: #ef4444; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+
+        .tab-bar { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 8px; align-items: center; }
+        .tab { padding: 8px 18px; background: white; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+        .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .tab-del { font-size: 12px; color: #ff0000; opacity: 0.5; }
+
+        /* টেবিল সেটিংস */
+        .sheet-box { background: white; border-radius: 8px; overflow: auto; border: 1px solid var(--border); height: calc(100vh - 215px); position: relative; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 1250px; }
+        thead th { position: sticky; top: 0; z-index: 100; background: #f8f9fa; border: 1px solid var(--border); padding: 8px; font-size: 11px; color: #3c4043; }
+        
+        td:first-child, th:first-child { position: sticky; left: 0; z-index: 101; background: #f1f3f4; width: 35px; text-align: center; border-right: 2px solid var(--border); }
+        th:first-child { z-index: 102; top: 0; }
+
+        td { border: 1px solid var(--border); padding: 0; height: 30px; position: relative; }
+
+        /* এডিটবল ইনপুট বক্স */
+        .edit-input { 
+            width: 100%; height: 100%; border: none; padding: 0 8px; font-size: 12px; 
+            font-weight: 700; background: transparent; outline: none; display: block;
+        }
+        .edit-input:focus { background: white; box-shadow: inset 0 0 0 2px #1a73e8; z-index: 5; }
+
+        /* সিলেকশন হাইলাইট */
+        td.selected { background-color: var(--selected) !important; }
+        td.selected::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 1px solid #1a73e8; pointer-events: none; }
+
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 11px; }
+        .btn-add { background: #1a73e8; }
+        .btn-bulk { background: var(--primary); height: 32px; }
+        .btn-collect { background: #4f46e5; height: 32px; }
+        .btn-download { background: #111827; height: 32px; }
+        .btn-view { background: #3c4043; font-size: 16px; }
+
+        #context-menu { position: fixed; background: white; border-radius: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); display: none; z-index: 2000; padding: 5px 0; border: 1px solid #ccc; min-width: 190px; }
+        .menu-item { padding: 12px 20px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee; }
+
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #323232; color: white; padding: 10px 20px; border-radius: 5px; display: none; z-index: 3000; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #bdc1c6; border-radius: 10px; }
+    </style>
+</head>
+<body onpointerup="stopSelection()">
+
+    <div id="toast">Action Success!</div>
+
+    <header>
+        <div style="color:var(--primary); font-size: 18px;"><i class="fa-solid fa-file-signature"></i> ADMIN PRO</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-view" id="viewToggle" onclick="toggleView()"><i class="fa-solid fa-desktop"></i></button>
+            <button class="btn btn-view" onclick="addUser()"><i class="fa-solid fa-user-plus"></i></button>
+            <button class="btn btn-add" onclick="addRow()">+ Row</button>
+        </div>
+    </header>
+
+    <div class="toolbar-row">
+        <!-- বাল্ক আপলোড -->
+        <div class="tool-box">
+            <textarea id="bulkData" class="input-f bulk-area" placeholder="Email|Pass|Cookie|Token..." oninput="countLines()"></textarea>
+            <div style="font-size: 10px; background: #333; color: #fff; padding: 2px 5px; border-radius: 4px;" id="lineCount">0</div>
+            <button class="btn btn-bulk" onclick="uploadBulk()">UPLOAD</button>
+        </div>
+
+        <!-- স্মার্ট কালেক্টর -->
+        <div class="tool-box collect-section">
+            <span style="font-size: 9px;">RANGE:</span>
+            <input type="number" id="collectFrom" class="input-f num-input" placeholder="Start">
+            <input type="number" id="collectTo" class="input-f num-input" placeholder="End">
+            <select id="exportFormat" class="input-f">
+                <option value="simple">UID | PASS | COOKIE</option>
+                <option value="full">UID | PASS | 2FA | COOKIE | MAIL</option>
+            </select>
+            <button class="btn btn-collect" onclick="addToPool()">COLLECT</button>
+            <div class="pool-counter" id="poolCounter">Pool: 0</div>
+            <button class="btn btn-download" onclick="downloadMasterPool()"><i class="fa-solid fa-download"></i></button>
+        </div>
+    </div>
+
+    <div id="tabs" class="tab-bar"></div>
+
+    <div class="sheet-box">
+        <table id="admin-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th style="width:140px;">UID</th>
+                    <th style="width:140px;">PASSWORD</th>
+                    <th style="width:140px;">2FA KEY</th>
+                    <th style="width:140px;">COOKIE</th>
+                    <th>FULL MAIL CONTENT</th>
+                    <th style="width:120px;">STATUS</th>
+                    <th style="width:90px;">COLOR</th>
+                </tr>
+            </thead>
+            <tbody id="sheet-body"></tbody>
+        </table>
+    </div>
+
+    <!-- একশন মেনু -->
+    <div id="context-menu">
+        <div id="range-btn" class="menu-item" onclick="enableRangeMode()"><i class="fa-solid fa-object-group"></i> Select Range</div>
+        <div class="menu-item" onclick="copySelected()"><i class="fa-solid fa-copy"></i> Copy Selected</div>
+        <div class="menu-item" onclick="clearSelected()"><i class="fa-solid fa-eraser"></i> Clear Content</div>
+        <div class="menu-item" onclick="deleteSelectedRows()"><i class="fa-solid fa-trash"></i> Delete Rows</div>
+        <div class="menu-item" style="color:red" onclick="hideMenu()"><i class="fa-solid fa-xmark"></i> Close</div>
+    </div>
+
+<script>
+    // --- ফায়ারবেস কনফিগারেশন ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAWe-hm45aoVdAuGajFP2aWUrXbWah29B0",
+        authDomain: "user-sheet-control.firebaseapp.com",
+        databaseURL: "https://user-sheet-control-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "user-sheet-control",
+        storageBucket: "user-sheet-control.firebasestorage.app",
+        messagingSenderId: "1003962005887",
+        appId: "1:1003962005887:web:cc9048bc5d1413449a024a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentTab = "", localData = {}, rowKeys = [];
+    let isRangeMode = false, startPoint = null, selectedSet = new Set();
+    let isDesktop = false, lastClickedRowIdx = -1, masterPool = [];
+
+    // ১. ডাটা লোড ও ট্যাব
+    function loadTabs() {
+        db.ref('users').on('value', snap => {
+            let html = '';
+            snap.forEach(c => {
+                let name = c.key;
+                if(!currentTab) currentTab = name;
+                let activeClass = (name === currentTab) ? 'active' : '';
+                html += `<div class="tab ${activeClass}" onclick="changeUser('${name}')">${name} <i class="fa-solid fa-circle-xmark tab-del" onclick="deleteUser(event, '${name}')"></i></div>`;
+            });
+            document.getElementById('tabs').innerHTML = html;
+            fetchTableData();
+        });
+    }
+
+    function changeUser(name) { currentTab = name; lastClickedRowIdx = -1; resetSelection(); fetchTableData(); loadTabs(); }
+
+    function deleteUser(e, name) {
+        e.stopPropagation();
+        if(confirm(`Delete user "${name}"?`)) { db.ref('users/' + name).remove(); db.ref('data/' + name).remove(); currentTab = ""; }
+    }
+
+    function fetchTableData() {
+        db.ref('data/' + currentTab).once('value', snap => {
+            localData = snap.val() || {};
+            rowKeys = Object.keys(localData);
+            renderTable();
+        });
+    }
+
+    // ২. টেবিল রেন্ডার (এডিটবল ইনপুটসহ)
+    function renderTable() {
+        let html = '';
+        rowKeys.forEach((key, rIdx) => {
+            let r = localData[key];
+            let bgColor = r.color || '#ffffff';
+            html += `<tr>
+                <td>${rIdx + 1}</td>
+                ${['uid','pass','tfa','cookie','fullMail','status','color'].map((f, cIdx) => `
+                    <td class="data-cell" id="cell-${rIdx}-${cIdx}" style="background-color:${bgColor}"
+                        onclick="handleCellSelect(event, ${rIdx}, ${cIdx}, '${key}', '${f}')">
+                        <input class="edit-input" value="${r[f]||''}" 
+                               onchange="saveEdit('${key}', '${f}', this.value)"
+                               onfocus="this.parentElement.click()">
+                    </td>
+                `).join('')}
+            </tr>`;
+        });
+        document.getElementById('sheet-body').innerHTML = html;
+    }
+
+    // ৩. এডিট সেভ ফাংশন
+    function saveEdit(rowId, field, value) {
+        localData[rowId][field] = value;
+        db.ref(`data/${currentTab}/${rowId}`).update({ [field]: value }).then(() => showToast("Saved!"));
+    }
+
+    // ৪. স্মার্ট ডাটা কালেক্টর
+    async function addToPool() {
+        const from = parseInt(document.getElementById('collectFrom').value) - 1;
+        const to = parseInt(document.getElementById('collectTo').value) - 1;
+        const format = document.getElementById('exportFormat').value;
+        if (isNaN(from) || isNaN(to) || from < 0 || to >= rowKeys.length || from > to) return alert("Invalid Range!");
+
+        const now = new Date();
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const formattedDate = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+        let updates = {};
+        for (let i = from; i <= to; i++) {
+            let key = rowKeys[i], row = localData[key];
+            let entry = format === "full" ? 
+                { "UID": row.uid||"", "PASSWORD": row.pass||"", "2FA KEY": row.tfa||"", "COOKIE": row.cookie||"", "FULL MAIL": row.fullMail||"" } :
+                { "UID": row.uid||"", "PASSWORD": row.pass||"", "COOKIE": row.cookie||"" };
+            masterPool.push(entry);
+            updates[`data/${currentTab}/${key}/status`] = formattedDate;
+            updates[`data/${currentTab}/${key}/color`] = "#e0e7ff";
+        }
+        await db.ref().update(updates);
+        document.getElementById('poolCounter').innerText = `Pool: ${masterPool.length}`;
+        showToast("Collected & Marked!");
+        fetchTableData();
+    }
+
+    function downloadMasterPool() {
+        if (masterPool.length === 0) return alert("Pool empty!");
+        const ws = XLSX.utils.json_to_sheet(masterPool);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Master_Export");
+        XLSX.writeFile(wb, `Collection_${Date.now()}.xlsx`);
+        if(confirm("Clear Pool?")) { masterPool = []; document.getElementById('poolCounter').innerText = "Pool: 0"; }
+    }
+
+    // ৫. সিলেকশন লজিক
+    function handleCellSelect(e, rIdx, cIdx, key, field) {
+        lastClickedRowIdx = rIdx;
+        if (!isRangeMode) {
+            resetSelection();
+            startPoint = {r: rIdx, c: cIdx, key: key, field: field};
+            const el = document.getElementById(`cell-${rIdx}-${cIdx}`);
+            el.classList.add('selected');
+            selectedSet.add(`${key}|${field}`);
+            if (e.target.tagName !== "INPUT") showActionMenu(e);
+        } else {
+            applyRange(rIdx, cIdx);
+            showActionMenu(e);
+        }
+    }
+
+    function applyRange(endR, endC) {
+        if (!startPoint) return;
+        document.querySelectorAll('td.selected').forEach(td => td.classList.remove('selected'));
+        selectedSet.clear();
+        let rS = Math.min(startPoint.r, endR), rE = Math.max(startPoint.r, endR);
+        let cS = Math.min(startPoint.c, endC), cE = Math.max(startPoint.c, endC);
+        const fields = ['uid','pass','tfa','cookie','fullMail','status','color'];
+        for (let i = rS; i <= rE; i++) {
+            for (let j = cS; j <= cE; j++) {
+                const el = document.getElementById(`cell-${i}-${j}`);
+                if (el) { el.classList.add('selected'); selectedSet.add(`${rowKeys[i]}|${fields[j]}`); }
+            }
+        }
+    }
+
+    function enableRangeMode() { isRangeMode = true; document.getElementById('range-btn').classList.add('active'); hideMenu(); }
+    function resetSelection() { isRangeMode = false; startPoint = null; selectedSet.clear(); document.querySelectorAll('td.selected').forEach(td => td.classList.remove('selected')); document.getElementById('range-btn').classList.remove('active'); hideMenu(); }
+    function showActionMenu(e) { const menu = document.getElementById('context-menu'); menu.style.display = 'block'; menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px'; menu.style.top = Math.min(e.clientY, window.innerHeight - 280) + 'px'; }
+    function hideMenu() { document.getElementById('context-menu').style.display = 'none'; }
+    function stopSelection() {}
+
+    // ৬. বাল্ক আপলোড
+    async function uploadBulk() {
+        const text = document.getElementById('bulkData').value.trim();
+        if(!text || !currentTab) return alert("Paste Data!");
+        const lines = text.split('\n').filter(l => l.trim() !== "");
+        let updates = {};
+        let targetIdx = lastClickedRowIdx === -1 ? rowKeys.findIndex(key => !localData[key].fullMail) : lastClickedRowIdx;
+        if (targetIdx === -1) targetIdx = rowKeys.length;
+        let lIdx = 0, cIdx = targetIdx;
+        while (lIdx < lines.length) {
+            if (cIdx < rowKeys.length) {
+                let key = rowKeys[cIdx];
+                if (!localData[key].fullMail) { updates[`data/${currentTab}/${key}/fullMail`] = lines[lIdx].trim(); lIdx++; }
+                cIdx++;
+            } else {
+                let k = db.ref(`data/${currentTab}`).push().key;
+                updates[`data/${currentTab}/${k}`] = { uid:"", pass:"", tfa:"", cookie:"", fullMail: lines[lIdx].trim(), status:"", color:"#ffffff" };
+                lIdx++;
+            }
+        }
+        db.ref().update(updates).then(() => { document.getElementById('bulkData').value = ""; document.getElementById('lineCount').innerText = "0"; showToast("Synced!"); fetchTableData(); });
+    }
+
+    function countLines() { const val = document.getElementById('bulkData').value.trim(); document.getElementById('lineCount').innerText = val ? val.split('\n').filter(l => l.trim()).length : 0; }
+    function toggleView() { isDesktop = !isDesktop; const vp = document.getElementById('viewport'); if(isDesktop) { document.body.classList.add('desktop-mode'); vp.setAttribute('content', 'width=1250, user-scalable=yes'); } else { document.body.classList.remove('desktop-mode'); vp.setAttribute('content', 'width=device-width, initial-scale=1.0, user-scalable=yes'); } showToast(isDesktop ? "Desktop Mode" : "Mobile Mode"); }
+    function addRow() { db.ref(`data/${currentTab}`).push({uid:"", pass:"", tfa:"", cookie:"", fullMail:"", status:"", color:"#ffffff"}).then(fetchTableData); }
+    function addUser() { let n = prompt("User Name:"); if(n) db.ref('users/'+n).set({color:"#4f46e5"}); }
+    function copySelected() { let text = ""; selectedSet.forEach(id => { let [k, f] = id.split('|'); text += (localData[k][f] || "") + "\t"; }); navigator.clipboard.writeText(text.trim()); showToast("Copied!"); resetSelection(); }
+    function clearSelected() { if(!confirm("Clear Content?")) return; let ups = {}; selectedSet.forEach(id => { let [k, f] = id.split('|'); ups[`data/${currentTab}/${k}/${f}`] = ""; }); db.ref().update(ups).then(fetchTableData); resetSelection(); }
+    function deleteSelectedRows() { if(!confirm("Delete rows?")) return; let rows = new Set(); selectedSet.forEach(id => rows.add(id.split('|')[0])); rows.forEach(k => db.ref(`data/${currentTab}/${k}`).remove()); showToast("Deleted!"); resetSelection(); fetchTableData(); }
+    function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2000); }
+
+    window.onload = loadTabs;
+</script>
+</body>
+</html>

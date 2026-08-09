@@ -3,84 +3,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Admin Panel - Master Controller</title>
+    <title>Master Admin - Ultimate Control Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Firebase & XLSX SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
-        :root { --primary: #0f9d58; --bg: #f1f5f9; --border: #bdc1c6; --selected: rgba(26, 115, 232, 0.4); --p-color: #4f46e5; }
+        :root { 
+            --primary: #0f9d58; --bg: #f1f5f9; --border: #bdc1c6; 
+            --selected: rgba(26, 115, 232, 0.4); --p-color: #4f46e5;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-weight: 700; }
         body { background: var(--bg); padding: 3px; color: #1e293b; overflow-x: hidden; font-size: 11px; }
+
         header { background: white; padding: 5px 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        
         .toolbar-container { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
         .tool-card { background: white; padding: 5px; border-radius: 8px; border: 1px solid var(--border); flex: 1; min-width: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .tool-title { font-size: 10px; color: var(--p-color); margin-bottom: 4px; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+        
         .input-f { padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 10px; outline: none; background: #fafafa; }
+        .bulk-area { width: 100%; height: 35px; resize: vertical; font-family: monospace; }
+        
+        .collect-group { display: flex; gap: 3px; align-items: center; }
+        .num-in { width: 40px; text-align: center; }
+        .pool-badge { font-size: 9px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; }
+
         .tab-bar { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 4px; }
         .tab { padding: 6px 15px; background: white; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 11px; }
         .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-        .sheet-box { background: white; border-radius: 8px; overflow: auto; border: 1px solid var(--border); height: calc(100vh - 350px); position: relative; }
+
+        .sheet-box { background: white; border-radius: 8px; overflow: auto; border: 1px solid var(--border); height: calc(100vh - 310px); position: relative; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 1200px; }
         thead th { position: sticky; top: 0; z-index: 100; background: #f8f9fa; border: 1px solid var(--border); padding: 5px; font-size: 10px; color: #3c4043; }
-        td { border: 1px solid var(--border); padding: 0; height: 28px; position: relative; }
+        td:first-child, th:first-child { position: sticky; left: 0; z-index: 101; background: #f1f3f4; width: 30px; text-align: center; border-right: 1.5px solid var(--border); }
+        th:first-child { z-index: 102; top: 0; }
+        td { border: 1px solid var(--border); padding: 0; height: 26px; position: relative; }
+
         .edit-cell { width: 100%; height: 100%; border: none; padding: 0 5px; font-size: 11px; font-weight: 700; background: transparent; outline: none; display: block; }
         .edit-cell:focus { background: white; box-shadow: inset 0 0 0 2px #1a73e8; z-index: 5; }
+
         td.cell-selected { background-color: var(--selected) !important; border: 1px solid #1a73e8 !important; }
-        .btn { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 10px; }
+
+        .btn { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 10px; transition: 0.1s; }
+        .btn-add { background: #1a73e8; }
+        .btn-bulk { background: var(--primary); width: 60px; }
+        .btn-sync { background: #ff5722; font-weight: bold; }
+
         .backup-area { margin-top: 5px; background: #fff3e0; border-radius: 10px; padding: 5px; border: 1px solid #ffe0b2; }
+
         #context-menu { position: fixed; background: white; border-radius: 6px; box-shadow: 0 3px 15px rgba(0,0,0,0.3); display: none; z-index: 2000; border: 1px solid #ccc; min-width: 180px; padding: 3px 0; }
         .menu-item { padding: 8px 15px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; }
+        
         #toast { position: fixed; bottom: 15px; right: 15px; background: #323232; color: white; padding: 8px 18px; border-radius: 4px; display: none; z-index: 3000; font-size: 10px; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #bdc1c6; border-radius: 10px; }
     </style>
 </head>
 <body onpointerup="stopSelection()">
+
     <div id="toast">Saved!</div>
-    <header><div style="color:var(--primary); font-size: 16px;">ADMIN PANEL</div><div style="display: flex; gap: 5px;"><button class="btn" style="background:#ff5722" onclick="syncAllToSheet()">MASTER SYNC</button><button class="btn" style="background:#3c4043" onclick="addNewUser()">+ User</button><button class="btn" style="background:#1a73e8" onclick="addRow()">+ Row</button><button class="btn" style="background:#ef4444" onclick="deleteUserSafely()">Delete User</button></div></header>
+
+    <header>
+        <div style="color:var(--primary); font-size: 16px;"><i class="fa-solid fa-server"></i> ADMIN PANEL</div>
+        <div style="display: flex; gap: 5px; align-items: center;">
+            <button class="btn btn-sync" onclick="syncAllToSheet()"><i class="fa-solid fa-sync"></i> MASTER SYNC</button>
+            <button class="btn" style="background:#3c4043" onclick="addNewUser()">+ User</button>
+            <button class="btn btn-add" onclick="addRow()">+ Row</button>
+            <button class="btn" style="background:#ef4444" onclick="deleteUserSafely()">Delete User</button>
+        </div>
+    </header>
+
     <div class="toolbar-container">
-        <div class="tool-card"><div class="tool-title">Bulk Import</div><textarea id="bulkData" class="input-f" style="width:100%; height:40px" placeholder="Email|Pass|Cookie|Token..."></textarea><div style="display:flex; justify-content:space-between; margin-top:3px"><span id="lineCount" style="font-size:9px">L: 0</span><button class="btn" style="background:var(--primary)" onclick="uploadBulk()">UPLOAD</button></div></div>
-        <div class="tool-card"><div class="tool-title">Collector</div><div class="collect-group"><input type="number" id="cFrom" class="input-f" style="width:40px" placeholder="F"><input type="number" id="cTo" class="input-f" style="width:40px" placeholder="T"><button class="btn" style="background:#4f46e5" onclick="collectToPool()">COLLECT</button><button class="btn" style="background:#111827" onclick="downloadMasterExcel()">EXCEL</button></div></div>
+        <!-- বাল্ক ইম্পোর্ট কার্ড -->
+        <div class="tool-card">
+            <div class="tool-title">Bulk Import</div>
+            <div style="display:flex; gap:5px;">
+                <textarea id="bulkData" class="input-f bulk-area" placeholder="Email|Pass|Cookie|Token..."></textarea>
+                <div style="display:flex; flex-direction:column; gap:3px;">
+                    <span id="lineCount" style="font-size:9px;">L: 0</span>
+                    <input type="number" id="startRow" class="input-f num-in" value="1" title="Start Row">
+                    <button class="btn btn-bulk" onclick="uploadBulk()">UPLOAD</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- রেঞ্জ কালেক্টর কার্ড -->
+        <div class="tool-card">
+            <div class="tool-title">Collector & Sync</div>
+            <div class="collect-group">
+                <input type="number" id="cFrom" class="input-f num-in" placeholder="From">
+                <input type="number" id="cTo" class="input-f num-in" placeholder="To">
+                <select id="exportFormat" class="input-f" style="flex:1">
+                    <option value="simple">UID|PASS|COOK</option>
+                    <option value="full">UID|PASS|2FA|COOK|MAIL</option>
+                </select>
+                <button class="btn btn-collect" style="background: #4f46e5;" onclick="collectToPool()">COLLECT</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <div class="pool-badge" id="poolCounter">Pool: 0</div>
+                <button class="btn" style="background: #111827;" onclick="downloadMasterExcel()"><i class="fa-solid fa-file-excel"></i> DOWNLOAD ALL</button>
+            </div>
+        </div>
     </div>
+
     <div id="tabs" class="tab-bar"></div>
-    <div class="sheet-box"><table><thead><tr><th>#</th><th style="width:140px;">UID</th><th style="width:130px;">PASSWORD</th><th style="width:130px;">2FA</th><th style="width:130px;">COOKIE</th><th>FULL MAIL</th><th style="width:100px;">STATUS</th><th style="width:80px;">COLOR</th></tr></thead><tbody id="sheet-body"></tbody></table></div>
-    <div class="backup-area"><h5 style="color:#e65100; font-size:10px;">RECOVERY</h5><div class="sheet-box" style="height:80px; border-color:#ffe0b2;"><table><tbody id="backup-body"></tbody></table></div></div>
-    <div id="context-menu"><div class="menu-item" onclick="enableRangeMode()">Select Range</div><div class="menu-item" onclick="clearSelectedCells()">Clear Cell</div><div class="menu-item" onclick="deleteSelectedRows()">Delete Rows</div><div class="menu-item" style="color:red" onclick="resetSelection()">Close</div></div>
+
+    <div class="sheet-box">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th style="width:140px;">UID</th>
+                    <th style="width:130px;">PASSWORD</th>
+                    <th style="width:130px;">2FA KEY</th>
+                    <th style="width:130px;">COOKIE</th>
+                    <th>FULL MAIL CONTENT</th>
+                    <th style="width:110px;">STATUS</th>
+                    <th style="width:85px;">COLOR</th>
+                </tr>
+            </thead>
+            <tbody id="sheet-body"></tbody>
+        </table>
+    </div>
+
+    <div class="backup-area">
+        <h5 style="color:#e65100; font-size:10px;"><i class="fa-solid fa-clock-rotate-left"></i> RECENT BACKUPS</h5>
+        <div class="sheet-box" style="height:90px; margin-top:3px; border-color:#ffe0b2;">
+            <table style="min-width:1000px"><tbody id="backup-body"></tbody></table>
+        </div>
+    </div>
+
+    <!-- একশন মেনু -->
+    <div id="context-menu">
+        <div class="menu-item" onclick="enableRangeMode()"><i class="fa-solid fa-object-group"></i> Select Range</div>
+        <div class="menu-item" onclick="clearSelectedCells()"><i class="fa-solid fa-eraser"></i> Clear Cell</div>
+        <div class="menu-item" onclick="bulkAction('status')"><i class="fa-solid fa-calendar-xmark"></i> Clear Status</div>
+        <div class="menu-item" onclick="bulkAction('color')"><i class="fa-solid fa-palette"></i> Reset Color</div>
+        <div class="menu-item" onclick="deleteSelectedRows()"><i class="fa-solid fa-trash"></i> Delete Selected Rows</div>
+        <div class="menu-item" style="color:red" onclick="resetSelection()"><i class="fa-solid fa-xmark"></i> Close Menu</div>
+    </div>
+
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyAWe-hm45aoVdAuGajFP2aWUrXbWah29B0", authDomain: "user-sheet-control.firebaseapp.com", databaseURL: "https://user-sheet-control-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "user-sheet-control", storageBucket: "user-sheet-control.firebasestorage.app", messagingSenderId: "1003962005887", appId: "1:1003962005887:web:cc9048bc5d1413449a024a" };
-    const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbxE2vBNH5N7X7rK9Dow6XAvcGWj6gvSWQ7u8tRA6OC0sjw7EvZX5SNDmf7VpICgehdC/exec"; 
-    firebase.initializeApp(firebaseConfig); const db = firebase.database();
-    let currentTab = "", localData = {}, rowKeys = [], masterPool = [], isRangeMode = false, startPoint = null, selectedSet = new Set();
-    function syncToGS(n) { db.ref('data/'+n).once('value', s => fetch(GAS_SYNC_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'sync',user:n,data:s.val()})})); }
-    function loadTabs() { db.ref('users').on('value', s => { let h = ''; s.forEach(c => { let n = c.key; if(!currentTab) currentTab = n; h += `<div class="tab ${n===currentTab?'active':''}" onclick="changeUser('${n}')">${n}</div>`; }); document.getElementById('tabs').innerHTML = h; fetchTableData(); loadBackups(); }); }
-    function changeUser(n) { currentTab = n; resetSelection(); fetchTableData(); loadBackups(); }
-    function fetchTableData() { db.ref('data/' + currentTab).once('value', s => { localData = s.val() || {}; rowKeys = Object.keys(localData); renderTable(); }); }
-    function renderTable() {
-        let h = ''; rowKeys.forEach((k, idx) => {
-            let r = localData[k]; let bgColor = r.color || '#ffffff';
-            h += `<tr><td>${idx+1}</td>${['uid','pass','tfa','cookie','fullMail','status','color'].map(f => `<td class="${selectedSet.has(`${k}|${f}`) ? 'cell-selected' : ''}" style="background-color:${bgColor}" onclick="handleCellClick(event, ${idx}, '${k}', '${f}')"><input class="edit-cell" value="${r[f]||''}" onchange="saveEdit('${k}','${f}',this.value)" onfocus="this.parentElement.click()"></td>`).join('')}</tr>`;
+    // --- ফায়ারবেস কনফিগারেশন এবং গুগল শিট ইউআরএল ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAWe-hm45aoVdAuGajFP2aWUrXbWah29B0",
+        authDomain: "user-sheet-control.firebaseapp.com",
+        databaseURL: "https://user-sheet-control-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "user-sheet-control",
+        storageBucket: "user-sheet-control.firebasestorage.app",
+        messagingSenderId: "1003962005887",
+        appId: "1:1003962005887:web:cc9048bc5d1413449a024a"
+    };
+    const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbzND3R3c3UeAwA2K7PztREliZX6ozdPkqcu7d4O4tArO7ZTZqTVcbvdsOWDUCFSiavh/exec"; 
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentTab = "", localData = {}, rowKeys = [], masterPool = [];
+    let isRangeMode = false, startPoint = null, selectedSet = new Set();
+
+    function loadTabs() {
+        db.ref('users').on('value', snap => {
+            let html = '';
+            if (snap.exists()) {
+                snap.forEach(c => {
+                    let name = c.key;
+                    if(!currentTab) currentTab = name;
+                    html += `<div class="tab ${name===currentTab?'active':''}" onclick="changeUser('${name}')">${name}</div>`;
+                });
+            }
+            document.getElementById('tabs').innerHTML = html;
+            if(currentTab) fetchTableData();
         });
-        document.getElementById('sheet-body').innerHTML = h;
     }
-    function saveEdit(id, f, v) { db.ref(`data/${currentTab}/${id}`).update({[f]:v}).then(() => { showToast(); syncToGS(currentTab); }); }
+
+    function changeUser(name) { 
+        if(currentTab !== name) {
+            db.ref('data/' + currentTab).off();
+            currentTab = name; 
+            resetSelection(); 
+            fetchTableData(); 
+            loadBackups();
+            loadTabs();
+        }
+    }
+
+    function fetchTableData() {
+        db.ref('data/' + currentTab).on('value', snap => {
+            localData = snap.val() || {};
+            rowKeys = Object.keys(localData);
+            renderTable();
+        });
+    }
+
+    function renderTable() {
+        let html = '';
+        rowKeys.forEach((key, idx) => {
+            let r = localData[key];
+            let bgColor = r.color || '#ffffff';
+            html += `<tr><td>${idx+1}</td>${['uid','pass','tfa','cookie','fullMail','status','color'].map(f => {
+                    let isSel = selectedSet.has(`${key}|${f}`);
+                    return `<td class="${isSel ? 'cell-selected' : ''}" style="background-color:${bgColor}" onclick="handleCellClick(event, ${idx}, '${key}', '${f}')">
+                        <input class="edit-cell" value="${r[f]||''}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
+                    </td>`;
+                }).join('')}</tr>`;
+        });
+        document.getElementById('sheet-body').innerHTML = html;
+    }
+
+    function syncToGoogleSheet(userName, actionType = "sync") {
+        db.ref('data/' + userName).once('value', snap => {
+            fetch(GAS_SYNC_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: actionType, user: userName, data: snap.val() })
+            });
+        });
+    }
+
+    function addNewUser() {
+        let n = prompt("Enter New User Name:");
+        if (n && n.trim() !== "") {
+            db.ref('users/' + n.trim()).set({color: "#4f46e5"}).then(() => {
+                showToast("User Created!");
+                syncToGoogleSheet(n.trim(), "sync");
+            });
+        }
+    }
+
+    function syncAllToSheet() {
+        showToast("Master Syncing...");
+        db.ref('users').once('value', snap => {
+            snap.forEach(c => syncToGoogleSheet(c.key, "sync"));
+            showToast("Master Sync Complete!");
+        });
+    }
+
+    function saveEdit(id, f, v) { 
+        db.ref(`data/${currentTab}/${id}`).update({[f]:v}).then(() => {
+            showToast(); syncToGoogleSheet(currentTab, "sync");
+        }); 
+    }
+
     function addRow() { db.ref(`data/${currentTab}`).push({uid:"", pass:"", tfa:"", cookie:"", fullMail:"", status:"", color:"#ffffff"}).then(fetchTableData); }
-    function addNewUser() { let n = prompt("Name:"); if(n) db.ref('users/'+n).set({color: "#4f46e5"}); }
-    function deleteUserSafely() { let n = prompt(`Delete "${currentTab}"? Type name:`); if(n===currentTab) { db.ref('users/'+n).remove(); db.ref('data/'+n).remove(); currentTab=""; } }
-    function syncAllToSheet() { db.ref('users').once('value', s => s.forEach(c => syncToGS(c.key))); showToast("Synced!"); }
-    function handleCellClick(e, rI, k, f) { if (!isRangeMode) { selectedSet.clear(); startPoint = {r: rI, f: f}; selectedSet.add(`${k}|${f}`); if(e.target.tagName !== "INPUT") showMenu(e); renderTable(); } else { applyRangeSelection(rI, f); showMenu(e); } }
-    function applyRangeSelection(rE, fE) { selectedSet.clear(); const flds = ['uid','pass','tfa','cookie','fullMail','status','color']; let fSIdx = flds.indexOf(startPoint.f), fEIdx = flds.indexOf(fE); let rS = Math.min(startPoint.r, rE), rEx = Math.max(startPoint.r, rE), cS = Math.min(fSIdx, fEIdx), cEx = Math.max(fSIdx, fEIdx); for (let i = rS; i <= rEx; i++) { for (let j = cS; j <= cEx; j++) { selectedSet.add(`${rowKeys[i]}|${flds[j]}`); } } renderTable(); }
+
+    async function uploadBulk() {
+        const txt = document.getElementById('bulkData').value.trim(), start = parseInt(document.getElementById('startRow').value)-1;
+        if(!txt) return; let ups = {};
+        txt.split('\n').forEach((l, i) => {
+            let target = start + i; let k = (target < rowKeys.length) ? rowKeys[target] : db.ref(`data/${currentTab}`).push().key;
+            ups[`data/${currentTab}/${k}`] = { uid:"", pass:"", tfa:"", cookie:"", fullMail:l.trim(), status:"", color:"#ffffff" };
+        });
+        db.ref().update(ups).then(() => { 
+            document.getElementById('bulkData').value = ""; fetchTableData(); syncToGoogleSheet(currentTab, "sync");
+        });
+    }
+
+    function handleCellClick(e, rIdx, key, f) {
+        if (!isRangeMode) {
+            selectedSet.clear(); startPoint = {r: rIdx, f: f}; selectedSet.add(`${key}|${f}`);
+            if(e.target.tagName !== "INPUT") showMenu(e); renderTable();
+        } else { applyRangeSelection(rIdx, f); showMenu(e); }
+    }
+    function applyRangeSelection(rEnd, fEnd) {
+        selectedSet.clear(); const flds = ['uid','pass','tfa','cookie','fullMail','status','color'];
+        let fSIdx = flds.indexOf(startPoint.f), fEIdx = flds.indexOf(fEnd);
+        let rS = Math.min(startPoint.r, rEnd), rE = Math.max(startPoint.r, rEnd), cS = Math.min(fSIdx, fEIdx), cE = Math.max(fSIdx, fEIdx);
+        for (let i = rS; i <= rE; i++) { for (let j = cS; j <= cE; j++) { selectedSet.add(`${rowKeys[i]}|${flds[j]}`); } }
+        renderTable();
+    }
+
+    async function clearSelectedCells() {
+        if(!confirm("Clear cells?")) return;
+        let ups = {}; for (let item of selectedSet) { let [k, f] = item.split('|'); ups[`data/${currentTab}/${k}/${f}`] = ""; }
+        db.ref().update(ups).then(() => { syncToGoogleSheet(currentTab, "sync"); resetSelection(); fetchTableData(); });
+    }
+
+    async function deleteSelectedRows() {
+        if(!confirm("Delete entire rows?")) return;
+        let rows = new Set(); selectedSet.forEach(item => rows.add(item.split('|')[0]));
+        for(let k of rows) db.ref(`data/${currentTab}/${k}`).remove();
+        syncToGoogleSheet(currentTab, "sync"); resetSelection();
+    }
+
     function showMenu(e) { const m = document.getElementById('context-menu'); m.style.display='block'; m.style.left=Math.min(e.clientX, window.innerWidth-220)+'px'; m.style.top=Math.min(e.clientY, window.innerHeight-300)+'px'; }
     function hideMenu() { document.getElementById('context-menu').style.display='none'; }
     function enableRangeMode() { isRangeMode = true; hideMenu(); showToast("Range Mode On"); }
     function resetSelection() { isRangeMode = false; startPoint = null; selectedSet.clear(); hideMenu(); renderTable(); }
-    async function clearSelectedCells() { let ups = {}; for (let item of selectedSet) { let [k, f] = item.split('|'); ups[`data/${currentTab}/${k}/${f}`] = ""; } db.ref().update(ups).then(() => { resetSelection(); fetchTableData(); syncToGS(currentTab); }); }
-    async function deleteSelectedRows() { let rows = new Set(); selectedSet.forEach(item => rows.add(item.split('|')[0])); for(let k of rows) db.ref(`data/${currentTab}/${k}`).remove(); resetSelection(); fetchTableData(); syncToGS(currentTab); }
-    async function collectToPool() { const from = parseInt(document.getElementById('cFrom').value)-1, to = parseInt(document.getElementById('cTo').value)-1, fmt = document.getElementById('exportFormat').value; if(from < 0 || to >= rowKeys.length) return alert("Range Error"); const dt = new Date().toLocaleDateString(); let ups = {}; for(let i=from; i<=to; i++){ let k = rowKeys[i], r = localData[k]; masterPool.push(fmt==='full'?{"UID":r.uid,"PASS":r.pass,"2FA":r.tfa,"COOKIE":r.cookie,"MAIL":r.fullMail}:{"UID":r.uid,"PASS":r.pass,"COOKIE":r.cookie}); ups[`data/${currentTab}/${k}/status`] = dt; ups[`data/${currentTab}/${k}/color`] = "#e0e7ff"; } await db.ref().update(ups); document.getElementById('poolCounter').innerText = `Pool: ${masterPool.length}`; fetchTableData(); syncToGS(currentTab); }
-    function downloadMasterExcel() { if(!masterPool.length) return; const ws = XLSX.utils.json_to_sheet(masterPool); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "List"); XLSX.writeFile(wb, `Report_${currentTab}.xlsx`); masterPool = []; document.getElementById('poolCounter').innerText = "Pool: 0"; }
-    function loadBackups() { db.ref('backups/' + currentTab).limitToLast(5).on('value', snap => { let h = ''; snap.forEach(c => { h += `<tr style="background:#fff9f0"><td>${new Date(parseInt(c.key)).toLocaleTimeString()}</td><td>${c.val().fullMail||'Data'}</td><td><button class="btn" style="background:green" onclick="restore('${c.key}')">Restore</button></td></tr>`; }); document.getElementById('backup-body').innerHTML = h; }); }
-    function restore(id) { db.ref(`backups/${currentTab}/${id}`).once('value', s => { db.ref(`data/${currentTab}`).push(s.val()).then(() => { db.ref(`backups/${currentTab}/${id}`).remove(); syncToGS(currentTab); }); }); }
-    async function uploadBulk() { const txt = document.getElementById('bulkData').value.trim(); if(!txt) return; let ups = {}; txt.split('\n').forEach((l) => { let k = db.ref(`data/${currentTab}`).push().key; ups[`data/${activeUser}/${k}`] = { uid:"", pass:"", tfa:"", cookie:"", fullMail:l.trim(), status:"", color:"#ffffff" }; }); db.ref().update(ups).then(() => { document.getElementById('bulkData').value = ""; fetchTableData(); syncToGS(currentTab); }); }
-    function showToast(m="Saved!") { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(()=>t.style.display = 'none', 1000); }
-    function stopSelection() {} window.onload = loadTabs;
+    function deleteUserSafely() { let n = prompt("Type Name to Delete:"); if(n===currentTab) { db.ref('users/'+n).remove(); db.ref('data/'+n).remove(); location.reload(); } }
+    function loadBackups() { db.ref('backups/' + currentTab).limitToLast(5).on('value', snap => { let h = ''; snap.forEach(c => { h += `<tr style="background:#fff9f0"><td>${new Date(parseInt(c.key)).toLocaleTimeString()}</td><td>${c.val().fullMail||'Data'}</td><td><button class="btn" style="background:green;padding:1px 5px" onclick="restore('${c.key}')">Restore</button></td></tr>`; }); document.getElementById('backup-body').innerHTML = h; }); }
+    function restore(id) { db.ref(`backups/${currentTab}/${id}`).once('value', s => { db.ref(`data/${currentTab}`).push(s.val()).then(() => { db.ref(`backups/${currentTab}/${id}`).remove(); syncToGoogleSheet(currentTab, "sync"); }); }); }
+    function updateCounter() { const t = document.getElementById('bulkData').value.trim(); document.getElementById('lineCount').innerText = "L: " + (t?t.split('\n').length:0); }
+    function showToast(msg="Saved!") { const t = document.getElementById('toast'); t.innerText = msg; t.style.display = 'block'; setTimeout(()=>t.style.display = 'none', 1000); }
+    function stopSelection() {}
+    window.onload = loadTabs;
 </script>
 </body>
 </html>

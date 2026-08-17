@@ -2,403 +2,1035 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Master Admin - Ultimate Control & Sync Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Admin Panel · Sectioned Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <!-- Firebase SDKs -->
+    <!-- Font Awesome for social icons -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <!-- Excel Export SDK -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
     <style>
-        :root { 
-            --primary: #0f9d58; --bg: #f1f5f9; --border: #bdc1c6; 
-            --selected: rgba(26, 115, 232, 0.4); --p-color: #4f46e5;
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+        :root {
+            --primary: #0f9d58;
+            --primary-dark: #0b7a44;
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --shadow: 0 8px 30px rgba(0,0,0,0.06);
+            --radius: 16px;
+            --fb-color: #1877f2;
+            --ig-color: #e4405f;
+        }
+        [data-theme="dark"] {
+            --bg: #0e1629;
+            --card: #1a2744;
+            --text: #eaf0fa;
+            --border: #2d3f60;
+            --primary: #3b82f6;
+            --fb-color: #3b82f6;
+            --ig-color: #e4405f;
+        }
+        body { background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
+        .container { max-width: 1600px; margin: 0 auto; }
+
+        /* ----- Social Toggle Buttons ----- */
+        .social-toggle {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .social-btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: white;
+            opacity: 0.6;
+        }
+        .social-btn.active {
+            opacity: 1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .social-btn.fb { background: var(--fb-color); }
+        .social-btn.ig { background: var(--ig-color); }
+        .social-btn:hover { transform: scale(0.97); }
+
+        .admin-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card); padding: 12px 24px; border-radius: var(--radius);
+            box-shadow: var(--shadow); margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+        }
+        .admin-header .brand { font-size: 22px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .admin-header .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+        .tab-nav {
+            display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; border-bottom: 2px solid var(--border); margin-bottom: 20px;
+        }
+        .tab-nav .tab-btn {
+            padding: 10px 22px; background: var(--card); border: 1px solid var(--border); border-radius: 40px;
+            cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; transition: 0.15s;
+            color: var(--text);
+        }
+        .tab-nav .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 8px rgba(15,157,88,0.25); }
+        .tab-nav .tab-btn:hover { transform: scale(0.97); }
+
+        .section-panel { display: none; }
+        .section-panel.active { display: block; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 14px; margin-bottom: 20px; }
+        .stat-card { background: var(--card); padding: 14px 18px; border-radius: var(--radius); box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
+        .stat-card .num { font-size: 28px; font-weight: 700; }
+        .stat-card .label { font-size: 12px; color: #64748b; }
+
+        .pending-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 14px 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .pending-section table { min-width: 300px; width: 100%; border-collapse: collapse; }
+        .pending-section td, .pending-section th { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+        .pending-section th { background: #f8fafc; font-weight: 600; }
+
+        .switch {
+            position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background: #cbd5e1; transition: .3s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        }
+        input:checked + .slider { background: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        .slider.round { border-radius: 24px; }
+        .slider.round:before { border-radius: 50%; }
+
+        .pending-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;
+        }
+        .pending-header .left { display: flex; align-items: center; gap: 8px; }
+        .pending-header .right { display: flex; align-items: center; gap: 12px; }
+        .auto-label { font-size: 12px; color: #64748b; user-select: none; }
+
+        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .tool-card { background: var(--card); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .tool-title { font-size: 14px; font-weight: 600; color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .flex-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .input-f { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); font-size: 13px; background: var(--bg); color: var(--text); outline: none; flex: 1; min-width: 100px; }
+        .input-f:focus { border-color: var(--primary); }
+        .btn { padding: 10px 20px; border: none; border-radius: 40px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.15s; background: var(--primary); color: white; }
+        .btn:hover { transform: scale(0.97); opacity: 0.9; }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+        .btn-danger { background: #ef4444; }
+        .btn-warning { background: #f59e0b; }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+        .bulk-area { height: 60px; resize: vertical; font-family: monospace; font-size: 12px; }
+
+        .user-select-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+        .user-select-item {
+            padding: 6px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 40px;
+            cursor: pointer; font-size: 12px; transition: 0.15s;
+        }
+        .user-select-item.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .user-select-item:hover { transform: scale(0.95); }
+
+        .tab-bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; }
+        .tab { padding: 8px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 40px; cursor: pointer; font-size: 13px; white-space: nowrap; transition: 0.15s; }
+        .tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 8px rgba(15,157,88,0.25); }
+
+        .sheet-box { background: var(--card); border-radius: var(--radius); overflow: auto; border: 1px solid var(--border); height: calc(100vh - 480px); min-height: 300px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        th { background: #f8fafc; color: #1e293b; font-weight: 600; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border); }
+        td:first-child, th:first-child { position: sticky; left: 0; z-index: 11; background: var(--card); width: 30px; border-right: 2px solid var(--border); }
+        .edit-cell { width: 100%; height: 100%; border: none; padding: 2px 4px; font-size: 12px; background: transparent; outline: none; }
+        .edit-cell:focus { background: white; box-shadow: inset 0 0 0 2px var(--primary); }
+        td.cell-selected { background: rgba(15,157,88,0.2) !important; border: 1.5px solid var(--primary) !important; }
+
+        .mail-cell {
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: default;
+        }
+        .mail-cell:hover {
+            white-space: normal;
+            word-break: break-all;
+            overflow: visible;
+            background: var(--card);
+            position: relative;
+            z-index: 20;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border-radius: 4px;
+            padding: 4px 8px;
+            max-width: 300px;
         }
 
-        /* ফন্ট এবং বোল্ড সেটিংস (Arial & Bold) */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-weight: 700; }
-        
-        body { background: var(--bg); padding: 3px; color: #1e293b; overflow-x: hidden; font-size: 11px; }
+        .backup-area { margin-top: 16px; background: #fef9f0; border-radius: var(--radius); padding: 12px; border: 1px solid #fde68a; }
+        .backup-title { font-size: 13px; font-weight: 600; color: #b45309; margin-bottom: 6px; }
 
-        header { background: white; padding: 5px 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* কম্প্যাক্ট টুলবার ডিজাইন */
-        .toolbar-container { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
-        .tool-card { background: white; padding: 5px; border-radius: 8px; border: 1px solid var(--border); flex: 1; min-width: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .tool-title { font-size: 10px; color: var(--p-color); margin-bottom: 4px; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 2px; }
-        
-        .input-f { padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 10px; outline: none; background: #fafafa; }
-        .bulk-area { width: 100%; height: 35px; resize: vertical; font-family: monospace; }
-        
-        .collect-group { display: flex; gap: 3px; align-items: center; }
-        .num-in { width: 40px; text-align: center; }
-        .pool-badge { font-size: 9px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; }
-
-        /* ট্যাব সেটিংস */
-        .tab-bar { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 4px; }
-        .tab { padding: 6px 15px; background: white; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 11px; transition: 0.2s; }
-        .tab.active { background: var(--primary) !important; color: white !important; border-color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-
-        /* টেবিল এবং ফিক্সড হেডার সেটিংস */
-        .sheet-box { background: white; border-radius: 8px; overflow: auto; border: 1px solid var(--border); height: calc(100vh - 350px); position: relative; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 1250px; }
-        thead th { position: sticky; top: 0; z-index: 100; background: #f8f9fa; border: 1px solid var(--border); padding: 5px; font-size: 10px; color: #3c4043; }
-        
-        /* স্টিকি সিরিয়াল কলাম */
-        td:first-child, th:first-child { position: sticky; left: 0; z-index: 101; background: #f1f3f4; width: 30px; text-align: center; border-right: 1.5px solid var(--border); }
-        th:first-child { z-index: 102; top: 0; }
-
-        td { border: 1px solid var(--border); padding: 0; height: 26px; position: relative; }
-
-        /* এডিটবল ইনপুট */
-        .edit-cell { width: 100%; height: 100%; border: none; padding: 0 5px; font-size: 11px; font-weight: 700; background: transparent; outline: none; display: block; }
-        .edit-cell:focus { background: white; box-shadow: inset 0 0 0 2px #1a73e8; z-index: 5; }
-
-        /* সিলেকশন হাইলাইট */
-        td.cell-selected { background-color: var(--selected) !important; border: 1.5px solid #1a73e8 !important; }
-
-        .btn { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 10px; transition: 0.1s; }
-        .btn-add { background: #1a73e8; }
-        .btn-bulk { background: var(--primary); width: 60px; }
-        .btn-collect { background: #4f46e5; }
-        .btn-download { background: #111827; }
-
-        /* ব্যাকআপ এরিয়া */
-        .backup-area { margin-top: 5px; background: #fff3e0; border-radius: 8px; padding: 5px; border: 1px solid #ffe0b2; }
-        .backup-title { font-size: 10px; color: #e65100; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
-
-        /* একশন মেনু */
-        #context-menu { 
-            position: fixed; background: white; border-radius: 6px; box-shadow: 0 3px 15px rgba(0,0,0,0.3); 
-            display: none; z-index: 2000; border: 1px solid #ccc; min-width: 190px; padding: 3px 0; 
+        #context-menu {
+            position: fixed; background: var(--card); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            display: none; z-index: 2000; border: 1px solid var(--border); min-width: 190px; padding: 4px 0;
         }
-        .menu-item { padding: 8px 15px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; }
+        .menu-item { padding: 10px 18px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+        .menu-item:hover { background: #f1f5f9; }
         .menu-item:last-child { border-bottom: none; }
-        .menu-item:hover { background: #f1f3f4; }
-        .menu-item i { width: 15px; text-align: center; color: #5f6368; }
 
-        #toast { position: fixed; bottom: 15px; right: 15px; background: #323232; color: white; padding: 8px 18px; border-radius: 4px; display: none; z-index: 3000; font-size: 10px; }
-        
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #bdc1c6; border-radius: 10px; }
+        #toast { position: fixed; bottom: 24px; right: 24px; background: #0f172a; color: white; padding: 12px 24px; border-radius: 40px; font-size: 13px; display: none; z-index: 3000; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+        #loading-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 99999; color: var(--text); font-size: 22px; }
+
+        .pool-badge { background: #ef4444; color: white; padding: 2px 16px; border-radius: 30px; font-size: 12px; }
+
+        @media (max-width: 768px) { .tool-grid { grid-template-columns: 1fr; } }
+
+        .collector-table {
+            table-layout: fixed;
+            min-width: 800px;
+        }
+        .collector-table th:nth-child(1) { width: 30px; }
+        .collector-table th:nth-child(2) { width: 130px; }  /* UID or Username */
+        .collector-table th:nth-child(3) { width: 120px; }
+        .collector-table th:nth-child(4) { width: 120px; }
+        .collector-table th:nth-child(5) { width: 140px; }
+        .collector-table th:nth-child(6) { width: 160px; }
+        .collector-table th:nth-child(7) { width: 100px; }
+        .collector-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .collector-table td:nth-child(6) { max-width: 160px; }
+        .collector-table .mail-cell {
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Additional input for Instagram Username in tools */
+        .extra-field { display: none; }
+        .extra-field.active { display: flex; }
     </style>
 </head>
-<body onpointerup="stopSelection()">
+<body>
+    <div id="loading-screen"><i class="fa-solid fa-spinner fa-pulse"></i> Loading Admin Panel...</div>
+    <div id="toast">✔ Done</div>
 
-    <div id="toast">Saved!</div>
-
-    <header>
-        <div style="color:var(--primary); font-size: 16px;"><i class="fa-solid fa-user-shield"></i> MASTER ADMIN PANEL</div>
-        <div style="display: flex; gap: 5px; align-items: center;">
-            <button class="btn" style="background:#3c4043" onclick="addNewUser()">+ Add User</button>
-            <button class="btn btn-add" onclick="addRow()">+ Add Row</button>
-            <button class="btn" style="background:#ef4444" onclick="deleteUserSafely()">Delete User</button>
-        </div>
-    </header>
-
-    <div class="toolbar-container">
-        <!-- বাল্ক ইম্পোর্ট সেকশন -->
-        <div class="tool-card">
-            <div class="tool-title">Bulk Import (Permanent Archive)</div>
-            <div style="display:flex; gap:5px;">
-                <textarea id="bulkData" class="input-f bulk-area" placeholder="Email|Pass|Cookie|Token..." oninput="updateCounter()"></textarea>
-                <div style="display:flex; flex-direction:column; gap:3px;">
-                    <span id="lineCount" style="font-size:9px;">Mails: 0</span>
-                    <input type="number" id="startRow" class="input-f num-in" value="1" title="Start at specific row">
-                    <button class="btn btn-bulk" onclick="uploadBulk()">UPLOAD</button>
+    <div id="app-content">
+        <div class="container">
+            <!-- Header with Social Toggle -->
+            <div class="admin-header">
+                <div class="brand"><i class="fa-solid fa-crown"></i> AdminPro</div>
+                <div class="tools">
+                    <!-- Social Toggle Buttons -->
+                    <div class="social-toggle">
+                        <button class="social-btn fb active" id="btnFacebook" onclick="setSocial('facebook')">
+                            <i class="fab fa-facebook"></i> Facebook
+                        </button>
+                        <button class="social-btn ig" id="btnInstagram" onclick="setSocial('instagram')">
+                            <i class="fab fa-instagram"></i> Instagram
+                        </button>
+                    </div>
+                    <button class="btn btn-sm btn-outline" onclick="addNewUser()"><i class="fa-solid fa-user-plus"></i> Add User</button>
+                    <button class="btn btn-sm" style="background:#1a73e8;" onclick="addRow()"><i class="fa-solid fa-plus"></i> Add Row</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCurrentUser()"><i class="fa-solid fa-user-minus"></i> Delete User</button>
+                    <button class="btn btn-sm btn-outline" onclick="toggleTheme()"><i class="fa-regular fa-circle-half-stroke"></i></button>
                 </div>
             </div>
-        </div>
 
-        <!-- স্মার্ট কালেক্টর সেকশন -->
-        <div class="tool-card">
-            <div class="tool-title">Smart Data Collector (Multi-User)</div>
-            <div class="collect-group">
-                <input type="number" id="cFrom" class="input-f num-in" placeholder="From">
-                <input type="number" id="cTo" class="input-f num-in" placeholder="To">
-                <select id="exportFormat" class="input-f" style="flex:1">
-                    <option value="simple">UID | PASS | COOKIE</option>
-                    <option value="full">UID | PASS | 2FA | COOKIE | MAIL</option>
-                </select>
-                <button class="btn btn-collect" onclick="collectToPool()">COLLECT</button>
+            <!-- Tab Navigation -->
+            <div class="tab-nav" id="mainTabs">
+                <div class="tab-btn active" data-target="section-dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</div>
+                <div class="tab-btn" data-target="section-bulk"><i class="fa-solid fa-upload"></i> Bulk Import</div>
+                <div class="tab-btn" data-target="section-collector"><i class="fa-solid fa-database"></i> Smart Collector</div>
+                <div class="tab-btn" data-target="section-data"><i class="fa-solid fa-table"></i> Data Management</div>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                <div class="pool-badge" id="poolCounter">Pool: 0 IDs</div>
-                <button class="btn btn-download" onclick="downloadMasterExcel()"><i class="fa-solid fa-file-excel"></i> DOWNLOAD ALL</button>
+
+            <!-- ===== SECTION: DASHBOARD ===== -->
+            <div id="section-dashboard" class="section-panel active">
+                <div class="stats-row" id="stats-row">
+                    <div class="stat-card"><div class="num" id="stat-users">0</div><div class="label">Total Users</div></div>
+                    <div class="stat-card"><div class="num" id="stat-pending">0</div><div class="label">Pending</div></div>
+                    <div class="stat-card"><div class="num" id="stat-rows">0</div><div class="label">Rows (current)</div></div>
+                </div>
+
+                <div class="pending-section" id="pending-section">
+                    <div class="pending-header">
+                        <div class="left">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <strong>Pending Approvals</strong>
+                        </div>
+                        <div class="right">
+                            <span class="auto-label">Auto Approve</span>
+                            <label class="switch">
+                                <input type="checkbox" id="autoApproveToggle" onchange="toggleAutoApprove()">
+                                <span class="slider round"></span>
+                            </label>
+                            <span id="pending-count" style="background:#ef4444; color:white; padding:2px 16px; border-radius:30px; font-size:12px;">0</span>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto; max-height:150px;">
+                        <table>
+                            <thead><tr><th>Username</th><th>Name</th><th>Action</th></tr></thead>
+                            <tbody id="pending-users-body"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+
+            <!-- ===== SECTION: BULK IMPORT ===== -->
+            <div id="section-bulk" class="section-panel">
+                <div class="tool-card">
+                    <div class="tool-title"><i class="fa-solid fa-upload"></i> Bulk Import (Email|Pass|Cookie|Token)</div>
+                    <div class="flex-row" style="margin-bottom:8px;">
+                        <span style="font-size:13px; font-weight:600;">Select User:</span>
+                    </div>
+                    <div class="user-select-list" id="bulkUserList"></div>
+                    <div class="flex-row">
+                        <textarea id="bulkData" class="input-f bulk-area" placeholder="Paste data here..." oninput="updateCounter()"></textarea>
+                    </div>
+                    <div class="flex-row" style="margin-top:8px;">
+                        <span style="font-size:12px;">Row:</span>
+                        <input type="number" id="startRow" class="input-f" style="width:60px;" value="1">
+                        <span id="lineCount" style="font-size:12px; color:#64748b;">Mails: 0</span>
+                        <button class="btn" style="background:var(--primary);" onclick="uploadBulk()"><i class="fa-solid fa-arrow-right"></i> Import</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: SMART COLLECTOR ===== -->
+            <div id="section-collector" class="section-panel">
+                <div class="tool-card">
+                    <div class="tool-title"><i class="fa-solid fa-database"></i> Smart Collector</div>
+                    <div class="flex-row" style="margin-bottom:12px;">
+                        <input type="number" id="cFrom" class="input-f" placeholder="From row" style="width:70px;" value="1">
+                        <input type="number" id="cTo" class="input-f" placeholder="To row" style="width:70px;" value="10">
+                        <select id="exportFormat" class="input-f" style="flex:1;">
+                            <option value="simple">UID | PASS | COOKIE | MAIL</option>
+                            <option value="full">UID | PASS | 2FA | COOKIE | MAIL</option>
+                        </select>
+                        <button class="btn" style="background:#4f46e5;" onclick="collectAutoRange()"><i class="fa-solid fa-plus"></i> Collect</button>
+                    </div>
+                    <div class="flex-row" style="margin-top:8px; justify-content:space-between;">
+                        <span class="pool-badge" id="poolCounter">Pool: 0</span>
+                        <button class="btn" style="background:#111827;" onclick="downloadMasterExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
+                        <button class="btn btn-sm btn-warning" onclick="resetCollectedColors()"><i class="fa-solid fa-undo"></i> Reset Colors</button>
+                    </div>
+                </div>
+
+                <!-- User tabs for collector -->
+                <div class="tab-bar" id="collectorUserTabs"></div>
+
+                <!-- Table for selected user (no checkboxes) -->
+                <div class="sheet-box">
+                    <table class="collector-table">
+                        <thead><tr>
+                            <th>#</th>
+                            <th id="collectorIdHeader">UID</th>  <!-- changes based on social -->
+                            <th>Pass</th>
+                            <th>2FA</th>
+                            <th>Cookie</th>
+                            <th>Full Mail</th>
+                            <th>Status</th>
+                        </tr></thead>
+                        <tbody id="collectorTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: DATA MANAGEMENT ===== -->
+            <div id="section-data" class="section-panel">
+                <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-sm" style="background:#1a73e8;" onclick="addRow()"><i class="fa-solid fa-plus"></i> Add Row</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSelectedRows()"><i class="fa-solid fa-trash"></i> Delete Selected Rows</button>
+                    <button class="btn btn-sm btn-warning" onclick="clearSelectedCells()"><i class="fa-solid fa-eraser"></i> Clear Selected Cells</button>
+                    <button class="btn btn-sm btn-outline" onclick="undoAction()"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+                    <button class="btn btn-sm btn-outline" onclick="redoAction()"><i class="fa-solid fa-rotate-right"></i> Redo</button>
+                </div>
+                <div class="tab-bar" id="tabs"></div>
+                <div class="sheet-box">
+                    <table id="main-table">
+                        <thead><tr>
+                            <th>#</th>
+                            <th id="mainIdHeader" style="width:130px;">UID</th>
+                            <th style="width:120px;">Pass</th>
+                            <th style="width:120px;">2FA</th>
+                            <th style="width:140px;">Cookie</th>
+                            <th style="width:160px;">Full Mail</th>
+                            <th style="width:100px;">Status</th>
+                            <th style="width:70px;">Color</th>
+                            <th style="width:40px;">X</th>
+                        </tr></thead>
+                        <tbody id="sheet-body"></tbody>
+                    </table>
+                </div>
+                <div class="backup-area">
+                    <div class="backup-title"><i class="fa-solid fa-clock-rotate-left"></i> Recovery Bin (last 8)</div>
+                    <div style="overflow-x:auto; max-height:90px;">
+                        <table style="min-width:600px;">
+                            <tbody id="backup-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <div id="tabs" class="tab-bar"></div>
-
-    <div class="sheet-box">
-        <table id="main-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th style="width:140px;">UID</th>
-                    <th style="width:130px;">PASSWORD</th>
-                    <th style="width:130px;">2FA KEY</th>
-                    <th style="width:130px;">COOKIE</th>
-                    <th>FULL MAIL CONTENT</th>
-                    <th style="width:110px;">STATUS</th>
-                    <th style="width:85px;">COLOR</th>
-                </tr>
-            </thead>
-            <tbody id="sheet-body"></tbody>
-        </table>
-    </div>
-
-    <!-- ব্যাকআপ ও রিকভারি বিন -->
-    <div class="backup-area">
-        <h5 class="backup-title"><i class="fa-solid fa-clock-rotate-left"></i> RECENT DELETED BACKUPS (Recovery Bin)</h5>
-        <div class="sheet-box" style="height:80px; margin-top:3px; border-color:#ffe0b2;">
-            <table style="min-width:1100px">
-                <tbody id="backup-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- কন্টেক্সট অ্যাকশন মেনু -->
+    <!-- Context Menu -->
     <div id="context-menu">
         <div class="menu-item" onclick="enableRangeMode()"><i class="fa-solid fa-object-group"></i> Select Range</div>
-        <div class="menu-item" onclick="copySelectedVertical()"><i class="fa-solid fa-copy"></i> Copy Selected (Vertical)</div>
-        <div class="menu-item" onclick="clearSelectedCells()"><i class="fa-solid fa-eraser"></i> Clear Content</div>
-        <div class="menu-item" onclick="deleteSelectedRows()"><i class="fa-solid fa-trash"></i> Delete Selected Rows</div>
-        <div class="menu-item" style="color:red" onclick="resetSelection()"><i class="fa-solid fa-xmark"></i> Close Menu</div>
+        <div class="menu-item" onclick="copySelectedVertical()"><i class="fa-solid fa-copy"></i> Copy Vertical</div>
+        <div class="menu-item" onclick="clearSelectedCells()"><i class="fa-solid fa-eraser"></i> Clear Cells</div>
+        <div class="menu-item" onclick="deleteSelectedRows()"><i class="fa-solid fa-trash"></i> Delete Rows</div>
+        <div class="menu-item" style="color:red;" onclick="resetSelection()"><i class="fa-solid fa-xmark"></i> Close</div>
     </div>
 
-<script>
-    // --- ফায়ারবেস কনফিগারেশন ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyAWe-hm45aoVdAuGajFP2aWUrXbWah29B0",
-        authDomain: "user-sheet-control.firebaseapp.com",
-        databaseURL: "https://user-sheet-control-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "user-sheet-control",
-        storageBucket: "user-sheet-control.firebasestorage.app",
-        messagingSenderId: "1003962005887",
-        appId: "1:1003962005887:web:cc9048bc5d1413449a024a"
-    };
+    <script>
+        // ===== FIREBASE CONFIG =====
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWe-hm45aoVdAuGajFP2aWUrXbWah29B0",
+            authDomain: "user-sheet-control.firebaseapp.com",
+            databaseURL: "https://user-sheet-control-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "user-sheet-control",
+            storageBucket: "user-sheet-control.firebasestorage.app",
+            messagingSenderId: "1003962005887",
+            appId: "1:1003962005887:web:cc9048bc5d1413449a024a"
+        };
+        const FORM_SYNC_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfeDglY6zK6GgaLiY6iliGxHoXwGJeAYCAogMrIazpcKVuSCQ/formResponse";
+        const FORM_ENTRIES = { uid: "entry.2103578011", pass: "entry.862857244", tfa: "entry.650662198", cookie: "entry.846810001", mail: "entry.2057161853" };
 
-    // --- গুগল ফর্ম এপিআই লিংক (স্থায়ী সংরক্ষণের জন্য) ---
-    const FORM_SYNC_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfeDglY6zK6GgaLiY6iliGxHoXwGJeAYCAogMrIazpcKVuSCQ/formResponse";
-    const FORM_ENTRIES = {
-        uid: "entry.2103578011",
-        pass: "entry.862857244",
-        tfa: "entry.650662198",
-        cookie: "entry.846810001",
-        mail: "entry.2057161853"
-    };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+        // ===== GLOBALS =====
+        let currentTab = "";
+        let localData = {}, rowKeys = [];
+        let masterPool = [];
+        let isRangeMode = false, startPoint = null, selectedSet = new Set();
+        let historyStack = [], redoStack = [];
 
-    let currentTab = "", localData = {}, rowKeys = [], masterPool = [];
-    let isRangeMode = false, startPoint = null, selectedSet = new Set();
+        let bulkTargetUser = "";
+        let currentCollectorUser = "";
+        let collectorRef = null;
 
-    // ১. ডাটা স্থায়ী আর্কাইভ করা (গুগল শিটে)
-    function archiveToGS(data) {
-        if (!data) return;
-        const rows = Array.isArray(data) ? data : [data];
-        rows.forEach(row => {
-            const p = new URLSearchParams();
-            p.append(FORM_ENTRIES.uid, row.uid || "");
-            p.append(FORM_ENTRIES.pass, row.pass || "");
-            p.append(FORM_ENTRIES.tfa, row.tfa || "");
-            p.append(FORM_ENTRIES.cookie, row.cookie || "");
-            p.append(FORM_ENTRIES.mail, row.fullMail || "");
-            fetch(FORM_SYNC_URL, { method: 'POST', mode: 'no-cors', body: p });
-        });
-    }
+        // Social media mode: 'facebook' or 'instagram'
+        let socialMode = 'facebook'; // default
 
-    // ২. ট্যাব এবং ইউজার লোড লজিক
-    function loadTabs() {
-        db.ref('users').on('value', snap => {
-            let html = '';
-            if (snap.exists()) {
-                snap.forEach(c => {
-                    let name = c.key;
-                    if(!currentTab) currentTab = name;
-                    html += `<div class="tab ${name===currentTab?'active':''}" onclick="changeUser('${name}')">${name}</div>`;
+        // ===== SOCIAL TOGGLE =====
+        function setSocial(mode) {
+            socialMode = mode;
+            localStorage.setItem('adminSocialMode', mode);
+            // Update button active states
+            document.getElementById('btnFacebook').classList.toggle('active', mode === 'facebook');
+            document.getElementById('btnInstagram').classList.toggle('active', mode === 'instagram');
+            // Update table headers and data rendering
+            const idHeader = document.getElementById('mainIdHeader');
+            const collectorHeader = document.getElementById('collectorIdHeader');
+            if (mode === 'facebook') {
+                idHeader.innerText = 'UID';
+                collectorHeader.innerText = 'UID';
+            } else {
+                idHeader.innerText = 'Username';
+                collectorHeader.innerText = 'Username';
+            }
+            // Re-render tables to show correct field (uid or username)
+            // For data management, we store uid field but we can display username if needed.
+            // Actually we store both? We'll store a field 'uid' for facebook, 'username' for instagram? But we need to decide.
+            // To keep it simple, we'll use the same field 'uid' for both but rename header.
+            // For Instagram, we might need an extra field 'username'. Let's assume we store 'username' in the 'uid' column for Instagram.
+            // When importing bulk, we'll treat the first part as uid/username.
+            // We'll also add a new field in the tools: username input for Instagram.
+            // We'll just update the header and the edit-cell placeholder.
+            // Re-render table
+            if (currentTab) fetchTableData();
+            if (currentCollectorUser) switchCollectorUser(currentCollectorUser);
+            // Also update bulk import placeholder?
+            // Show/hide extra field for Instagram username in tools? We'll add a new field in the top tools.
+            // For admin panel, we have OTP, Cookie, 2FA tools. We'll add a field for username when Instagram is active.
+            // We'll implement that later.
+            showToast('Switched to ' + mode.charAt(0).toUpperCase() + mode.slice(1));
+        }
+
+        // Load saved social mode
+        function loadSocialMode() {
+            const saved = localStorage.getItem('adminSocialMode');
+            if (saved) {
+                setSocial(saved);
+            } else {
+                // default facebook
+                setSocial('facebook');
+            }
+        }
+
+        // ===== TAB NAVIGATION =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+                    const target = document.getElementById(this.dataset.target);
+                    if (target) target.classList.add('active');
+                    if (this.dataset.target === 'section-collector') {
+                        loadCollectorUserTabs();
+                    }
                 });
-            }
-            document.getElementById('tabs').innerHTML = html;
-            if(currentTab) {
-                fetchTableData(); loadBackups();
-            }
+            });
+            loadSocialMode();
         });
-    }
 
-    function changeUser(name) { 
-        if(currentTab !== name) {
-            db.ref('data/' + currentTab).off();
-            currentTab = name; 
-            resetSelection(); 
-            fetchTableData(); 
-            loadBackups();
+        // ===== INIT =====
+        function init() {
+            loadPendingUsers();
+            loadAutoApproveStatus();
             loadTabs();
+            loadBackups();
+            updateStats();
+            loadUserLists();
+            setTimeout(loadCollectorUserTabs, 500);
+            document.getElementById('loading-screen').style.display = 'none';
         }
-    }
 
-    function fetchTableData() {
-        db.ref('data/' + currentTab).on('value', snap => {
-            localData = snap.val() || {};
-            rowKeys = Object.keys(localData);
+        // ===== AUTO APPROVE TOGGLE =====
+        function loadAutoApproveStatus() {
+            db.ref('settings/autoApprove').on('value', snap => {
+                const val = snap.val() || false;
+                document.getElementById('autoApproveToggle').checked = val;
+            });
+        }
+
+        function toggleAutoApprove() {
+            const checked = document.getElementById('autoApproveToggle').checked;
+            db.ref('settings/autoApprove').set(checked);
+            showToast(checked ? 'Auto Approve ON' : 'Auto Approve OFF');
+        }
+
+        // ===== LOAD USER LISTS FOR BULK =====
+        function loadUserLists() {
+            db.ref('users').on('value', snap => {
+                let users = [];
+                snap.forEach(c => {
+                    const user = c.val();
+                    if (user.role !== 'admin') {
+                        users.push({ username: c.key, name: user.name || c.key, approved: user.approved });
+                    }
+                });
+                users.sort((a,b) => a.username.localeCompare(b.username));
+
+                let bulkHtml = '';
+                users.forEach(u => {
+                    const active = (u.username === bulkTargetUser) ? 'active' : '';
+                    bulkHtml += `<div class="user-select-item ${active}" onclick="setBulkTarget('${u.username}')">${u.username}</div>`;
+                });
+                document.getElementById('bulkUserList').innerHTML = bulkHtml || '<span style="color:#64748b;">No users found</span>';
+            });
+        }
+
+        function setBulkTarget(username) {
+            bulkTargetUser = username;
+            document.querySelectorAll('#bulkUserList .user-select-item').forEach(el => {
+                el.classList.toggle('active', el.innerText === username);
+            });
+        }
+
+        // ===== BULK IMPORT =====
+        function updateCounter() {
+            const t = document.getElementById('bulkData').value.trim();
+            document.getElementById('lineCount').innerText = 'Mails: ' + (t ? t.split('\n').length : 0);
+        }
+
+        async function uploadBulk() {
+            if (!bulkTargetUser) {
+                alert('Please select a user from the list above.');
+                return;
+            }
+            const txt = document.getElementById('bulkData').value.trim();
+            const start = parseInt(document.getElementById('startRow').value) - 1;
+            if (!txt) return alert('Paste data!');
+            const lines = txt.split('\n').filter(l => l.trim() !== '');
+            let ups = {}, arch = [];
+            const snap = await db.ref('data/' + bulkTargetUser).once('value');
+            const targetData = snap.val() || {};
+            const targetKeys = Object.keys(targetData);
+            lines.forEach((l, i) => {
+                let target = start + i;
+                let k = (target < targetKeys.length) ? targetKeys[target] : db.ref(`data/${bulkTargetUser}`).push().key;
+                let obj = { uid: '', pass: '', tfa: '', cookie: '', fullMail: l.trim(), status: '', color: '#ffffff' };
+                // If Instagram mode, we treat the first part as username? We'll just store in uid for simplicity.
+                ups[`data/${bulkTargetUser}/${k}`] = obj;
+                arch.push(obj);
+            });
+            await db.ref().update(ups);
+            document.getElementById('bulkData').value = '';
+            showToast('Imported to ' + bulkTargetUser);
+            archiveToGS(arch);
+            if (currentTab === bulkTargetUser) fetchTableData();
+        }
+
+        // ===== SMART COLLECTOR USER TABS =====
+        function loadCollectorUserTabs() {
+            db.ref('users').once('value', snap => {
+                let users = [];
+                snap.forEach(c => {
+                    const user = c.val();
+                    if (user.role !== 'admin') {
+                        users.push(c.key);
+                    }
+                });
+                users.sort();
+                let html = '';
+                users.forEach(username => {
+                    const active = (username === currentCollectorUser) ? 'active' : '';
+                    html += `<div class="tab ${active}" onclick="switchCollectorUser('${username}')">${username}</div>`;
+                });
+                document.getElementById('collectorUserTabs').innerHTML = html || '<div style="color:#64748b;padding:8px;">No users</div>';
+                if (!currentCollectorUser && users.length > 0) {
+                    switchCollectorUser(users[0]);
+                } else if (currentCollectorUser) {
+                    switchCollectorUser(currentCollectorUser);
+                }
+            });
+        }
+
+        function switchCollectorUser(username) {
+            if (collectorRef) {
+                collectorRef.off();
+                collectorRef = null;
+            }
+            currentCollectorUser = username;
+            document.querySelectorAll('#collectorUserTabs .tab').forEach(el => {
+                el.classList.toggle('active', el.innerText === username);
+            });
+            const ref = db.ref('data/' + username);
+            collectorRef = ref;
+            ref.on('value', snap => {
+                const data = snap.val() || {};
+                const keys = Object.keys(data);
+                renderCollectorTable(data, keys);
+            });
+        }
+
+        function renderCollectorTable(data, keys) {
+            const tbody = document.getElementById('collectorTableBody');
+            if (!tbody) return;
+            if (keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding:20px; color:#64748b;">No data rows</td></tr>';
+                return;
+            }
+            let html = '';
+            const isIG = (socialMode === 'instagram');
+            keys.forEach((key, idx) => {
+                const row = data[key];
+                const bgColor = row.color || '#ffffff';
+                // For Instagram, we might want to display username instead of uid; but we store uid as username.
+                const idValue = row.uid || '';
+                html += `<tr style="background-color:${bgColor};">
+                    <td>${idx+1}</td>
+                    <td>${idValue}</td>
+                    <td>${row.pass||''}</td>
+                    <td>${row.tfa||''}</td>
+                    <td>${row.cookie||''}</td>
+                    <td class="mail-cell" title="${row.fullMail||''}">${row.fullMail||''}</td>
+                    <td>${row.status||''}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // ===== COLLECT AUTO RANGE =====
+        async function collectAutoRange() {
+            const from = parseInt(document.getElementById('cFrom').value) - 1;
+            const to = parseInt(document.getElementById('cTo').value) - 1;
+            if (isNaN(from) || isNaN(to) || from < 0 || to < from) {
+                alert('Please enter valid row range.');
+                return;
+            }
+            if (!currentCollectorUser) {
+                alert('Please select a user from the tabs above.');
+                return;
+            }
+            const fmt = document.getElementById('exportFormat').value;
+            const username = currentCollectorUser;
+
+            const snap = await db.ref('data/' + username).once('value');
+            const data = snap.val() || {};
+            const allKeys = Object.keys(data);
+            if (allKeys.length === 0) {
+                alert('No data rows for this user.');
+                return;
+            }
+            const effectiveFrom = Math.max(0, from);
+            const effectiveTo = Math.min(allKeys.length - 1, to);
+            if (effectiveFrom > effectiveTo) {
+                alert('Range is out of bounds.');
+                return;
+            }
+
+            const updates = {};
+            const now = new Date();
+            const dateStr = `${now.getDate()} ${now.toLocaleString('en-us',{month:'long'})} ${now.getFullYear()}`;
+            let collected = 0;
+
+            for (let i = effectiveFrom; i <= effectiveTo; i++) {
+                const key = allKeys[i];
+                const row = data[key];
+                if (!row) continue;
+                let entry;
+                if (fmt === 'simple') {
+                    entry = { "UID": row.uid || '', "PASS": row.pass || '', "COOKIE": row.cookie || '', "MAIL": row.fullMail || '' };
+                } else {
+                    entry = { "UID": row.uid || '', "PASS": row.pass || '', "2FA": row.tfa || '', "COOKIE": row.cookie || '', "MAIL": row.fullMail || '' };
+                }
+                masterPool.push(entry);
+                updates[`data/${username}/${key}/status`] = dateStr;
+                updates[`data/${username}/${key}/color`] = '#dbeafe';
+                collected++;
+            }
+
+            if (collected === 0) {
+                alert('No rows found in the given range.');
+                return;
+            }
+
+            await db.ref().update(updates);
+            document.getElementById('poolCounter').innerText = 'Pool: ' + masterPool.length;
+            showToast(`Collected ${collected} rows from ${username}.`);
+        }
+
+        // ===== DOWNLOAD EXCEL =====
+        function downloadMasterExcel() {
+            if (!masterPool.length) return alert('Pool empty');
+            const ws = XLSX.utils.json_to_sheet(masterPool);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Collection');
+            XLSX.writeFile(wb, `Report_${Date.now()}.xlsx`);
+            if (confirm('Clear pool?')) { masterPool = []; document.getElementById('poolCounter').innerText = 'Pool: 0'; }
+        }
+
+        // ===== RESET COLLECTED COLORS (only for current user) =====
+        async function resetCollectedColors() {
+            if (!currentCollectorUser) {
+                alert('No user selected. Please select a user from the tabs above.');
+                return;
+            }
+            const username = currentCollectorUser;
+            if (!confirm(`Remove collected color (reset to white) and clear status for all rows in user "${username}"?`)) return;
+            
+            const snapData = await db.ref('data/' + username).once('value');
+            const data = snapData.val() || {};
+            const keys = Object.keys(data);
+            if (keys.length === 0) {
+                alert('No data rows for this user.');
+                return;
+            }
+            let updates = {};
+            keys.forEach(key => {
+                updates[`data/${username}/${key}/color`] = '#ffffff';
+                updates[`data/${username}/${key}/status`] = '';
+            });
+            await db.ref().update(updates);
+            showToast(`Colors and status reset for user "${username}".`);
+            if (currentTab === username) fetchTableData();
+        }
+
+        // ===== DATA MANAGEMENT FUNCTIONS =====
+        function loadTabs() {
+            db.ref('users').on('value', snap => {
+                let html = '';
+                snap.forEach(c => {
+                    const user = c.val();
+                    if (user.role === 'admin') return;
+                    if (!currentTab) currentTab = c.key;
+                    html += `<div class="tab ${c.key===currentTab?'active':''}" onclick="changeUser('${c.key}')">${c.key}</div>`;
+                });
+                document.getElementById('tabs').innerHTML = html;
+                if (currentTab) fetchTableData();
+                updateStats();
+            });
+        }
+
+        function changeUser(name) {
+            if (currentTab !== name) {
+                db.ref('data/' + currentTab).off();
+                currentTab = name;
+                resetSelection();
+                fetchTableData();
+                loadBackups();
+                loadTabs();
+            }
+        }
+
+        function fetchTableData() {
+            db.ref('data/' + currentTab).on('value', snap => {
+                localData = snap.val() || {};
+                rowKeys = Object.keys(localData);
+                renderTable();
+                updateStats();
+            });
+        }
+
+        function renderTable() {
+            let html = '';
+            const isIG = (socialMode === 'instagram');
+            rowKeys.forEach((key, idx) => {
+                let r = localData[key];
+                let bgColor = r.color || '#ffffff';
+                // For Instagram, we use uid field as username.
+                const idValue = r.uid || '';
+                html += `<tr style="background-color:${bgColor};">
+                    <td>${idx+1}</td>
+                    <td class="${selectedSet.has(key+'|uid')?'cell-selected':''}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','uid')">
+                        <input class="edit-cell" value="${idValue}" onchange="saveEdit('${key}','uid',this.value)" onfocus="this.parentElement.click()">
+                    </td>
+                    ${['pass','tfa','cookie','fullMail','status','color'].map(f => {
+                        let isSel = selectedSet.has(`${key}|${f}`);
+                        let cellContent = r[f] || '';
+                        if (f === 'fullMail') {
+                            return `<td class="${isSel?'cell-selected':''} mail-cell" title="${cellContent}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','${f}')">
+                                <input class="edit-cell" value="${cellContent}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
+                            </td>`;
+                        } else {
+                            return `<td class="${isSel?'cell-selected':''}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','${f}')">
+                                <input class="edit-cell" value="${cellContent}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
+                            </td>`;
+                        }
+                    }).join('')}
+                    <td><i class="fa-solid fa-trash" style="color:red;cursor:pointer;" onclick="deleteSingleRow('${key}')"></i></td>
+                </tr>`;
+            });
+            document.getElementById('sheet-body').innerHTML = html;
+            document.getElementById('stat-rows').innerText = rowKeys.length;
+        }
+
+        function saveEdit(id, f, v) {
+            db.ref(`data/${currentTab}/${id}`).update({ [f]: v }).then(() => {
+                showToast('Saved');
+                archiveToGS(localData[id]);
+            });
+        }
+
+        function archiveToGS(data) {
+            if (!data) return;
+            const rows = Array.isArray(data) ? data : [data];
+            rows.forEach(row => {
+                const p = new URLSearchParams();
+                p.append(FORM_ENTRIES.uid, row.uid || '');
+                p.append(FORM_ENTRIES.pass, row.pass || '');
+                p.append(FORM_ENTRIES.tfa, row.tfa || '');
+                p.append(FORM_ENTRIES.cookie, row.cookie || '');
+                p.append(FORM_ENTRIES.mail, row.fullMail || '');
+                fetch(FORM_SYNC_URL, { method: 'POST', mode: 'no-cors', body: p });
+            });
+        }
+
+        function handleCellClick(e, rIdx, key, f) {
+            if (!isRangeMode) {
+                selectedSet.clear();
+                startPoint = { r: rIdx, f: f };
+                selectedSet.add(`${key}|${f}`);
+                if (e.target.tagName !== 'INPUT') showMenu(e);
+                renderTable();
+            } else {
+                applyRangeSelection(rIdx, f);
+                showMenu(e);
+            }
+        }
+
+        function applyRangeSelection(rE, fE) {
+            selectedSet.clear();
+            const flds = ['uid', 'pass', 'tfa', 'cookie', 'fullMail', 'status', 'color'];
+            let fS = flds.indexOf(startPoint.f), fE2 = flds.indexOf(fE);
+            let rS = Math.min(startPoint.r, rE), rEx = Math.max(startPoint.r, rE);
+            let cS = Math.min(fS, fE2), cEx = Math.max(fS, fE2);
+            for (let i = rS; i <= rEx; i++) {
+                for (let j = cS; j <= cEx; j++) {
+                    selectedSet.add(`${rowKeys[i]}|${flds[j]}`);
+                }
+            }
             renderTable();
-        });
-    }
-
-    function renderTable() {
-        let html = '';
-        rowKeys.forEach((key, idx) => {
-            let r = localData[key];
-            let bgColor = r.color || '#ffffff';
-            html += `<tr><td>${idx+1}</td>${['uid','pass','tfa','cookie','fullMail','status','color'].map(f => {
-                    let isSel = selectedSet.has(`${key}|${f}`);
-                    return `<td class="${isSel ? 'cell-selected' : ''}" style="background-color:${bgColor}" onclick="handleCellClick(event, ${idx}, '${key}', '${f}')">
-                        <input class="edit-cell" value="${r[f]||''}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
-                    </td>`;
-                }).join('')}</tr>`;
-        });
-        document.getElementById('sheet-body').innerHTML = html;
-    }
-
-    // ৩. সেভ এবং এডিট
-    function saveEdit(id, f, v) { 
-        db.ref(`data/${currentTab}/${id}`).update({[f]:v}).then(() => {
-            showToast("Saved!"); 
-            archiveToGS(localData[id]); 
-        }); 
-    }
-
-    function addRow() { db.ref(`data/${currentTab}`).push({uid:"", pass:"", tfa:"", cookie:"", fullMail:"", status:"", color:"#ffffff"}).then(fetchTableData); }
-    function addNewUser() { let n = prompt("Enter New User Name:"); if(n) db.ref('users/'+n).set({color: "#4f46e5"}); }
-
-    function deleteUserSafely() {
-        let n = prompt(`To delete user "${currentTab}" PERMANENTLY, type the name:`);
-        if (n === currentTab) {
-            db.ref('users/' + n).remove().then(() => { db.ref('data/' + n).remove(); location.reload(); });
         }
-    }
 
-    // ৪. বাল্ক ইম্পোর্ট উইথ রো কন্ট্রোল
-    async function uploadBulk() {
-        const txt = document.getElementById('bulkData').value.trim();
-        const start = parseInt(document.getElementById('startRow').value) - 1;
-        if(!txt) return alert("Paste Data!");
-        
-        const lines = txt.split('\n').filter(l => l.trim() !== "");
-        let ups = {}; let archList = [];
-        
-        lines.forEach((l, i) => {
-            let target = start + i;
-            let k = (target < rowKeys.length) ? rowKeys[target] : db.ref(`data/${currentTab}`).push().key;
-            let obj = { uid:"", pass:"", tfa:"", cookie:"", fullMail:l.trim(), status:"", color:"#ffffff" };
-            ups[`data/${currentTab}/${k}`] = obj;
-            archList.push(obj);
-        });
-        
-        db.ref().update(ups).then(() => { 
-            document.getElementById('bulkData').value = ""; 
-            showToast("Sync Successful!");
-            archiveToGS(archList);
-        });
-    }
+        function enableRangeMode() { isRangeMode = true; hideMenu(); showToast('Range Mode ON'); }
+        function resetSelection() { isRangeMode = false; startPoint = null; selectedSet.clear(); hideMenu(); renderTable(); }
 
-    // ৫. স্মার্ট কালেক্টর
-    async function collectToPool() {
-        const from = parseInt(document.getElementById('cFrom').value)-1;
-        const to = parseInt(document.getElementById('cTo').value)-1;
-        const fmt = document.getElementById('exportFormat').value;
-        if(isNaN(from) || isNaN(to) || from < 0 || to >= rowKeys.length) return alert("Range Error");
-
-        const now = new Date();
-        const formattedDate = `${now.getDate()} ${now.toLocaleString('en-us',{month:'long'})} ${now.getFullYear()}`;
-        let ups = {};
-
-        for(let i=from; i<=to; i++){
-            let k = rowKeys[i], r = localData[k];
-            let entry = fmt==='full'?{"UID":r.uid,"PASS":r.pass,"2FA":r.tfa,"COOKIE":r.cookie,"MAIL":r.fullMail}:{"UID":r.uid,"PASS":r.pass,"COOKIE":r.cookie};
-            masterPool.push(entry);
-            ups[`data/${currentTab}/${k}/status`] = formattedDate;
-            ups[`data/${currentTab}/${k}/color`] = "#e0e7ff";
-            archiveToGS(r);
+        function copySelectedVertical() {
+            let txt = '';
+            selectedSet.forEach(item => {
+                let [k, f] = item.split('|');
+                txt += (localData[k][f] || '') + '\n';
+            });
+            navigator.clipboard.writeText(txt.trim()).then(() => showToast('Copied!'));
+            resetSelection();
         }
-        await db.ref().update(ups);
-        document.getElementById('poolCounter').innerText = `Pool: ${masterPool.length} IDs`;
-        showToast("Added to Pool!");
-    }
 
-    function downloadMasterExcel() {
-        if(!masterPool.length) return alert("Pool is empty!");
-        const ws = XLSX.utils.json_to_sheet(masterPool);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Collection");
-        XLSX.writeFile(wb, `Report_${currentTab}_${Date.now()}.xlsx`);
-        if(confirm("Clear pool?")) { masterPool = []; document.getElementById('poolCounter').innerText = "Pool: 0 IDs"; }
-    }
+        async function clearSelectedCells() {
+            if (!confirm('Clear selected cells?')) return;
+            let ups = {};
+            for (let item of selectedSet) {
+                let [k, f] = item.split('|');
+                await backupRow(k);
+                ups[`data/${currentTab}/${k}/${f}`] = '';
+            }
+            db.ref().update(ups).then(resetSelection);
+        }
 
-    // --- সিলেকশন ও মেনু ফাংশন ---
-    function handleCellClick(e, rIdx, key, f) {
-        if (!isRangeMode) {
-            selectedSet.clear(); startPoint = {r: rIdx, f: f}; selectedSet.add(`${key}|${f}`);
-            if(e.target.tagName !== "INPUT") showMenu(e); renderTable();
-        } else { applyRangeSelection(rIdx, f); showMenu(e); }
-    }
-    function applyRangeSelection(rE, fE) {
-        selectedSet.clear(); const flds = ['uid','pass','tfa','cookie','fullMail','status','color'];
-        let fSIdx = flds.indexOf(startPoint.f), fEIdx = flds.indexOf(fE);
-        let rS = Math.min(startPoint.r, rE), rEx = Math.max(startPoint.r, rE), cS = Math.min(fSIdx, fEIdx), cEx = Math.max(fSIdx, fEIdx);
-        for (let i = rS; i <= rEx; i++) { for (let j = cS; j <= cEx; j++) { selectedSet.add(`${rowKeys[i]}|${flds[j]}`); } }
-        renderTable();
-    }
+        async function deleteSelectedRows() {
+            if (!confirm('Delete selected rows?')) return;
+            let rows = new Set();
+            selectedSet.forEach(item => rows.add(item.split('|')[0]));
+            for (let k of rows) {
+                await backupRow(k);
+                db.ref(`data/${currentTab}/${k}`).remove();
+            }
+            showToast('Deleted');
+            resetSelection();
+        }
 
-    function copySelectedVertical() {
-        let txt = ""; selectedSet.forEach(item => { let [k, f] = item.split('|'); txt += (localData[k][f] || "") + "\n"; });
-        navigator.clipboard.writeText(txt.trim()); showToast("Vertical Copy Done!"); resetSelection();
-    }
+        async function deleteSingleRow(key) {
+            if (!confirm('Delete this row?')) return;
+            await backupRow(key);
+            db.ref(`data/${currentTab}/${key}`).remove();
+            showToast('Row deleted');
+        }
 
-    async function clearSelectedCells() {
-        if(!confirm("Clear selected cells? Content will be backed up.")) return;
-        let ups = {}; for (let item of selectedSet) { let [k, f] = item.split('|'); await backupRow(k); ups[`data/${currentTab}/${k}/${f}`] = ""; }
-        db.ref().update(ups).then(resetSelection);
-    }
+        function showMenu(e) {
+            const m = document.getElementById('context-menu');
+            m.style.display = 'block';
+            m.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
+            m.style.top = Math.min(e.clientY, window.innerHeight - 300) + 'px';
+        }
+        function hideMenu() { document.getElementById('context-menu').style.display = 'none'; }
 
-    async function deleteSelectedRows() {
-        if(!confirm("Delete rows? Content will be backed up.")) return;
-        let rows = new Set(); selectedSet.forEach(item => rows.add(item.split('|')[0]));
-        for(let k of rows) { await backupRow(k); db.ref(`data/${currentTab}/${k}`).remove(); }
-        showToast("Deleted!"); resetSelection();
-    }
+        // ===== BACKUP =====
+        async function backupRow(key) {
+            const r = localData[key];
+            if (!r) return;
+            await db.ref(`backups/${currentTab}/${Date.now()}`).set(r);
+        }
 
-    // --- ব্যাকআপ ও রিকভারি ---
-    async function backupRow(key) {
-        const r = localData[key]; if(!r) return;
-        await db.ref(`backups/${currentTab}/${Date.now()}`).set(r);
-    }
-    function loadBackups() {
-        db.ref('backups/' + currentTab).limitToLast(8).on('value', snap => {
-            let h = ''; snap.forEach(c => { h += `<tr style="background:#fff9f0"><td>${new Date(parseInt(c.key)).toLocaleTimeString()}</td><td>${c.val().fullMail||'Data'}</td><td><button class="btn" style="background:green;padding:2px 8px" onclick="restore('${c.key}')">Restore</button></td></tr>`; });
-            document.getElementById('backup-body').innerHTML = h;
-        });
-    }
-    function restore(id) {
-        db.ref(`backups/${currentTab}/${id}`).once('value', s => {
-            db.ref(`data/${currentTab}`).push(s.val()).then(() => db.ref(`backups/${currentTab}/${id}`).remove());
-        });
-    }
+        function loadBackups() {
+            db.ref('backups/' + currentTab).limitToLast(8).on('value', snap => {
+                let h = '';
+                snap.forEach(c => {
+                    h += `<tr style="background:#fef9f0;"><td>${new Date(parseInt(c.key)).toLocaleString()}</td><td>${c.val().fullMail||'Data'}</td><td><button class="btn" style="background:green;padding:2px 12px;" onclick="restore('${c.key}')">Restore</button></td></tr>`;
+                });
+                document.getElementById('backup-body').innerHTML = h;
+            });
+        }
 
-    function showMenu(e) { const m = document.getElementById('context-menu'); m.style.display='block'; m.style.left=Math.min(e.clientX, window.innerWidth-220)+'px'; m.style.top=Math.min(e.clientY, window.innerHeight-300)+'px'; }
-    function hideMenu() { document.getElementById('context-menu').style.display='none'; }
-    function enableRangeMode() { isRangeMode = true; hideMenu(); showToast("Range Mode On"); }
-    function resetSelection() { isRangeMode = false; startPoint = null; selectedSet.clear(); hideMenu(); renderTable(); }
-    function updateCounter() { const t = document.getElementById('bulkData').value.trim(); document.getElementById('lineCount').innerText = "Mails: " + (t?t.split('\n').length:0); }
-    function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(()=>t.style.display = 'none', 1200); }
-    function stopSelection() {}
+        function restore(id) {
+            db.ref(`backups/${currentTab}/${id}`).once('value', s => {
+                db.ref(`data/${currentTab}`).push(s.val()).then(() => db.ref(`backups/${currentTab}/${id}`).remove());
+            });
+        }
 
-    window.onload = loadTabs;
-</script>
+        // ===== USER MANAGEMENT =====
+        async function addNewUser() {
+            const username = prompt('Enter new username:');
+            if (!username) return;
+            const snap = await db.ref('users/' + username).once('value');
+            if (snap.exists()) { alert('Username already exists!'); return; }
+            const password = prompt('Enter password:');
+            if (!password) { alert('Password required.'); return; }
+            const name = prompt('Full name (optional):') || username;
+            const hashed = btoa(password + 'salt');
+            await db.ref('users/' + username).set({ name, password: hashed, approved: true, role: 'user' });
+            await db.ref('data/' + username).set({});
+            alert(`User "${username}" created.`);
+            loadTabs();
+            loadUserLists();
+            loadCollectorUserTabs();
+        }
+
+        function deleteCurrentUser() {
+            let n = prompt(`To delete "${currentTab}", type the name:`);
+            if (n === currentTab) {
+                db.ref('users/'+n).remove().then(() => { db.ref('data/'+n).remove(); location.reload(); });
+            }
+        }
+
+        function addRow() {
+            db.ref(`data/${currentTab}`).push({ uid: '', pass: '', tfa: '', cookie: '', fullMail: '', status: '', color: '#ffffff' });
+        }
+
+        // ===== PENDING APPROVALS =====
+        function loadPendingUsers() {
+            db.ref('users').on('value', snap => {
+                let html = '', count = 0;
+                snap.forEach(c => {
+                    const user = c.val();
+                    if (user.approved === false && user.role !== 'admin') {
+                        count++;
+                        html += `<tr><td>${c.key}</td><td>${user.name||''}</td><td><button class="btn" style="background:#0f9d58;padding:4px 16px;" onclick="approveUser('${c.key}')">Approve</button></td></tr>`;
+                    }
+                });
+                document.getElementById('pending-users-body').innerHTML = html || '<tr><td colspan="3">No pending</td></tr>';
+                document.getElementById('pending-count').innerText = count;
+                document.getElementById('stat-pending').innerText = count;
+            });
+        }
+
+        function approveUser(username) {
+            db.ref('users/' + username).update({ approved: true });
+            showToast('Approved!');
+        }
+
+        // ===== STATS =====
+        function updateStats() {
+            db.ref('users').once('value', snap => {
+                let total = 0;
+                snap.forEach(c => { if (c.val().role !== 'admin') total++; });
+                document.getElementById('stat-users').innerText = total;
+            });
+            document.getElementById('stat-rows').innerText = rowKeys.length;
+        }
+
+        // ===== UNDO / REDO =====
+        window.undoAction = async function() {
+            if (historyStack.length) {
+                redoStack.push(JSON.parse(JSON.stringify(localData)));
+                await db.ref(`data/${currentTab}`).set(historyStack.pop());
+                showToast('Undo');
+            }
+        };
+        window.redoAction = async function() {
+            if (redoStack.length) {
+                historyStack.push(JSON.parse(JSON.stringify(localData)));
+                await db.ref(`data/${currentTab}`).set(redoStack.pop());
+                showToast('Redo');
+            }
+        };
+
+        // ===== TOAST & THEME =====
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 1500);
+        }
+
+        function toggleTheme() {
+            const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+        if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+
+        // ===== START =====
+        window.onload = init;
+    </script>
 </body>
 </html>

@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Admin Panel · Sectioned Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <!-- Font Awesome for social icons -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -20,8 +19,6 @@
             --border: #e2e8f0;
             --shadow: 0 8px 30px rgba(0,0,0,0.06);
             --radius: 16px;
-            --fb-color: #1877f2;
-            --ig-color: #e4405f;
         }
         [data-theme="dark"] {
             --bg: #0e1629;
@@ -29,39 +26,9 @@
             --text: #eaf0fa;
             --border: #2d3f60;
             --primary: #3b82f6;
-            --fb-color: #3b82f6;
-            --ig-color: #e4405f;
         }
         body { background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
         .container { max-width: 1600px; margin: 0 auto; }
-
-        /* ----- Social Toggle Buttons ----- */
-        .social-toggle {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        .social-btn {
-            padding: 6px 16px;
-            border: none;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            transition: 0.15s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: white;
-            opacity: 0.6;
-        }
-        .social-btn.active {
-            opacity: 1;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        .social-btn.fb { background: var(--fb-color); }
-        .social-btn.ig { background: var(--ig-color); }
-        .social-btn:hover { transform: scale(0.97); }
 
         .admin-header {
             display: flex; justify-content: space-between; align-items: center;
@@ -69,7 +36,7 @@
             box-shadow: var(--shadow); margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
         }
         .admin-header .brand { font-size: 22px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 10px; }
-        .admin-header .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .admin-header .tools { display: flex; gap: 8px; flex-wrap: wrap; }
 
         .tab-nav {
             display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; border-bottom: 2px solid var(--border); margin-bottom: 20px;
@@ -101,29 +68,74 @@
         .pending-section td, .pending-section th { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
         .pending-section th { background: #f8fafc; font-weight: 600; }
 
+        /* ------- Toggle Switch ------- */
         .switch {
-            position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
         }
-        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
         .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background: #cbd5e1; transition: .3s; border-radius: 24px;
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #cbd5e1;
+            transition: .3s;
+            border-radius: 24px;
         }
         .slider:before {
-            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
-            background: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
         }
-        input:checked + .slider { background: var(--primary); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        input:checked + .slider {
+            background: var(--primary);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
         .slider.round { border-radius: 24px; }
         .slider.round:before { border-radius: 50%; }
 
         .pending-header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        .pending-header .left { display: flex; align-items: center; gap: 8px; }
-        .pending-header .right { display: flex; align-items: center; gap: 12px; }
-        .auto-label { font-size: 12px; color: #64748b; user-select: none; }
+        .pending-header .left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pending-header .right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .auto-label {
+            font-size: 12px;
+            color: #64748b;
+            user-select: none;
+        }
 
         .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
         .tool-card { background: var(--card); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); border: 1px solid var(--border); }
@@ -203,7 +215,7 @@
             min-width: 800px;
         }
         .collector-table th:nth-child(1) { width: 30px; }
-        .collector-table th:nth-child(2) { width: 130px; }  /* UID or Username */
+        .collector-table th:nth-child(2) { width: 130px; }
         .collector-table th:nth-child(3) { width: 120px; }
         .collector-table th:nth-child(4) { width: 120px; }
         .collector-table th:nth-child(5) { width: 140px; }
@@ -217,10 +229,6 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
-        /* Additional input for Instagram Username in tools */
-        .extra-field { display: none; }
-        .extra-field.active { display: flex; }
     </style>
 </head>
 <body>
@@ -229,19 +237,10 @@
 
     <div id="app-content">
         <div class="container">
-            <!-- Header with Social Toggle -->
+            <!-- Header -->
             <div class="admin-header">
                 <div class="brand"><i class="fa-solid fa-crown"></i> AdminPro</div>
                 <div class="tools">
-                    <!-- Social Toggle Buttons -->
-                    <div class="social-toggle">
-                        <button class="social-btn fb active" id="btnFacebook" onclick="setSocial('facebook')">
-                            <i class="fab fa-facebook"></i> Facebook
-                        </button>
-                        <button class="social-btn ig" id="btnInstagram" onclick="setSocial('instagram')">
-                            <i class="fab fa-instagram"></i> Instagram
-                        </button>
-                    </div>
                     <button class="btn btn-sm btn-outline" onclick="addNewUser()"><i class="fa-solid fa-user-plus"></i> Add User</button>
                     <button class="btn btn-sm" style="background:#1a73e8;" onclick="addRow()"><i class="fa-solid fa-plus"></i> Add Row</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteCurrentUser()"><i class="fa-solid fa-user-minus"></i> Delete User</button>
@@ -265,6 +264,7 @@
                     <div class="stat-card"><div class="num" id="stat-rows">0</div><div class="label">Rows (current)</div></div>
                 </div>
 
+                <!-- Pending Approvals with Auto-Approve Toggle -->
                 <div class="pending-section" id="pending-section">
                     <div class="pending-header">
                         <div class="left">
@@ -332,12 +332,12 @@
                 <!-- User tabs for collector -->
                 <div class="tab-bar" id="collectorUserTabs"></div>
 
-                <!-- Table for selected user (no checkboxes) -->
+                <!-- Table for selected user -->
                 <div class="sheet-box">
                     <table class="collector-table">
                         <thead><tr>
                             <th>#</th>
-                            <th id="collectorIdHeader">UID</th>  <!-- changes based on social -->
+                            <th>UID</th>
                             <th>Pass</th>
                             <th>2FA</th>
                             <th>Cookie</th>
@@ -363,7 +363,7 @@
                     <table id="main-table">
                         <thead><tr>
                             <th>#</th>
-                            <th id="mainIdHeader" style="width:130px;">UID</th>
+                            <th style="width:130px;">UID</th>
                             <th style="width:120px;">Pass</th>
                             <th style="width:120px;">2FA</th>
                             <th style="width:140px;">Cookie</th>
@@ -425,55 +425,6 @@
         let currentCollectorUser = "";
         let collectorRef = null;
 
-        // Social media mode: 'facebook' or 'instagram'
-        let socialMode = 'facebook'; // default
-
-        // ===== SOCIAL TOGGLE =====
-        function setSocial(mode) {
-            socialMode = mode;
-            localStorage.setItem('adminSocialMode', mode);
-            // Update button active states
-            document.getElementById('btnFacebook').classList.toggle('active', mode === 'facebook');
-            document.getElementById('btnInstagram').classList.toggle('active', mode === 'instagram');
-            // Update table headers and data rendering
-            const idHeader = document.getElementById('mainIdHeader');
-            const collectorHeader = document.getElementById('collectorIdHeader');
-            if (mode === 'facebook') {
-                idHeader.innerText = 'UID';
-                collectorHeader.innerText = 'UID';
-            } else {
-                idHeader.innerText = 'Username';
-                collectorHeader.innerText = 'Username';
-            }
-            // Re-render tables to show correct field (uid or username)
-            // For data management, we store uid field but we can display username if needed.
-            // Actually we store both? We'll store a field 'uid' for facebook, 'username' for instagram? But we need to decide.
-            // To keep it simple, we'll use the same field 'uid' for both but rename header.
-            // For Instagram, we might need an extra field 'username'. Let's assume we store 'username' in the 'uid' column for Instagram.
-            // When importing bulk, we'll treat the first part as uid/username.
-            // We'll also add a new field in the tools: username input for Instagram.
-            // We'll just update the header and the edit-cell placeholder.
-            // Re-render table
-            if (currentTab) fetchTableData();
-            if (currentCollectorUser) switchCollectorUser(currentCollectorUser);
-            // Also update bulk import placeholder?
-            // Show/hide extra field for Instagram username in tools? We'll add a new field in the top tools.
-            // For admin panel, we have OTP, Cookie, 2FA tools. We'll add a field for username when Instagram is active.
-            // We'll implement that later.
-            showToast('Switched to ' + mode.charAt(0).toUpperCase() + mode.slice(1));
-        }
-
-        // Load saved social mode
-        function loadSocialMode() {
-            const saved = localStorage.getItem('adminSocialMode');
-            if (saved) {
-                setSocial(saved);
-            } else {
-                // default facebook
-                setSocial('facebook');
-            }
-        }
-
         // ===== TAB NAVIGATION =====
         document.addEventListener('DOMContentLoaded', function() {
             const tabBtns = document.querySelectorAll('.tab-btn');
@@ -489,7 +440,6 @@
                     }
                 });
             });
-            loadSocialMode();
         });
 
         // ===== INIT =====
@@ -569,7 +519,6 @@
                 let target = start + i;
                 let k = (target < targetKeys.length) ? targetKeys[target] : db.ref(`data/${bulkTargetUser}`).push().key;
                 let obj = { uid: '', pass: '', tfa: '', cookie: '', fullMail: l.trim(), status: '', color: '#ffffff' };
-                // If Instagram mode, we treat the first part as username? We'll just store in uid for simplicity.
                 ups[`data/${bulkTargetUser}/${k}`] = obj;
                 arch.push(obj);
             });
@@ -631,15 +580,12 @@
                 return;
             }
             let html = '';
-            const isIG = (socialMode === 'instagram');
             keys.forEach((key, idx) => {
                 const row = data[key];
                 const bgColor = row.color || '#ffffff';
-                // For Instagram, we might want to display username instead of uid; but we store uid as username.
-                const idValue = row.uid || '';
                 html += `<tr style="background-color:${bgColor};">
                     <td>${idx+1}</td>
-                    <td>${idValue}</td>
+                    <td>${row.uid||''}</td>
                     <td>${row.pass||''}</td>
                     <td>${row.tfa||''}</td>
                     <td>${row.cookie||''}</td>
@@ -784,18 +730,12 @@
 
         function renderTable() {
             let html = '';
-            const isIG = (socialMode === 'instagram');
             rowKeys.forEach((key, idx) => {
                 let r = localData[key];
                 let bgColor = r.color || '#ffffff';
-                // For Instagram, we use uid field as username.
-                const idValue = r.uid || '';
                 html += `<tr style="background-color:${bgColor};">
                     <td>${idx+1}</td>
-                    <td class="${selectedSet.has(key+'|uid')?'cell-selected':''}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','uid')">
-                        <input class="edit-cell" value="${idValue}" onchange="saveEdit('${key}','uid',this.value)" onfocus="this.parentElement.click()">
-                    </td>
-                    ${['pass','tfa','cookie','fullMail','status','color'].map(f => {
+                    ${['uid','pass','tfa','cookie','fullMail','status','color'].map(f => {
                         let isSel = selectedSet.has(`${key}|${f}`);
                         let cellContent = r[f] || '';
                         if (f === 'fullMail') {

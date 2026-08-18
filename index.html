@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -424,6 +425,8 @@
         let bulkTargetUser = "";
         let currentCollectorUser = "";
         let collectorRef = null;
+        let dataRef = null;
+        let backupRef = null;
 
         // ===== TAB NAVIGATION =====
         document.addEventListener('DOMContentLoaded', function() {
@@ -447,7 +450,6 @@
             loadPendingUsers();
             loadAutoApproveStatus();
             loadTabs();
-            loadBackups();
             updateStats();
             loadUserLists();
             setTimeout(loadCollectorUserTabs, 500);
@@ -512,14 +514,19 @@
             if (!txt) return alert('Paste data!');
             const lines = txt.split('\n').filter(l => l.trim() !== '');
             let ups = {}, arch = [];
-            const snap = await db.ref('data/' + bulkTargetUser).once('value');
+            const dataPath = `data/${bulkTargetUser}/facebook`;
+            const snap = await db.ref(dataPath).once('value');
             const targetData = snap.val() || {};
             const targetKeys = Object.keys(targetData);
+            if (currentTab === bulkTargetUser) saveHistory();
             lines.forEach((l, i) => {
                 let target = start + i;
-                let k = (target < targetKeys.length) ? targetKeys[target] : db.ref(`data/${bulkTargetUser}`).push().key;
-                let obj = { uid: '', pass: '', tfa: '', cookie: '', fullMail: l.trim(), status: '', color: '#ffffff' };
-                ups[`data/${bulkTargetUser}/${k}`] = obj;
+                let k = (target < targetKeys.length) ? targetKeys[target] : db.ref(dataPath).push().key;
+                let obj = {
+                    ...(targetData[k] || {}),
+                    fullMail: l.trim()
+                };
+                ups[`${dataPath}/${k}`] = obj;
                 arch.push(obj);
             });
             await db.ref().update(ups);
@@ -563,7 +570,7 @@
             document.querySelectorAll('#collectorUserTabs .tab').forEach(el => {
                 el.classList.toggle('active', el.innerText === username);
             });
-            const ref = db.ref('data/' + username);
+            const ref = db.ref(`data/${username}/facebook`);
             collectorRef = ref;
             ref.on('value', snap => {
                 const data = snap.val() || {};
@@ -582,15 +589,15 @@
             let html = '';
             keys.forEach((key, idx) => {
                 const row = data[key];
-                const bgColor = row.color || '#ffffff';
+                const bgColor = safeColor(row.color);
                 html += `<tr style="background-color:${bgColor};">
                     <td>${idx+1}</td>
-                    <td>${row.uid||''}</td>
-                    <td>${row.pass||''}</td>
-                    <td>${row.tfa||''}</td>
-                    <td>${row.cookie||''}</td>
-                    <td class="mail-cell" title="${row.fullMail||''}">${row.fullMail||''}</td>
-                    <td>${row.status||''}</td>
+                    <td>${escapeHtml(row.uid)}</td>
+                    <td>${escapeHtml(row.pass)}</td>
+                    <td>${escapeHtml(row.tfa)}</td>
+                    <td>${escapeHtml(row.cookie)}</td>
+                    <td class="mail-cell" title="${escapeHtml(row.fullMail)}">${escapeHtml(row.fullMail)}</td>
+                    <td>${escapeHtml(row.status)}</td>
                 </tr>`;
             });
             tbody.innerHTML = html;
@@ -611,7 +618,8 @@
             const fmt = document.getElementById('exportFormat').value;
             const username = currentCollectorUser;
 
-            const snap = await db.ref('data/' + username).once('value');
+            const dataPath = `data/${username}/facebook`;
+            const snap = await db.ref(dataPath).once('value');
             const data = snap.val() || {};
             const allKeys = Object.keys(data);
             if (allKeys.length === 0) {
@@ -626,6 +634,7 @@
             }
 
             const updates = {};
+            if (currentTab === username) saveHistory();
             const now = new Date();
             const dateStr = `${now.getDate()} ${now.toLocaleString('en-us',{month:'long'})} ${now.getFullYear()}`;
             let collected = 0;
@@ -641,8 +650,8 @@
                     entry = { "UID": row.uid || '', "PASS": row.pass || '', "2FA": row.tfa || '', "COOKIE": row.cookie || '', "MAIL": row.fullMail || '' };
                 }
                 masterPool.push(entry);
-                updates[`data/${username}/${key}/status`] = dateStr;
-                updates[`data/${username}/${key}/color`] = '#dbeafe';
+                updates[`${dataPath}/${key}/status`] = dateStr;
+                updates[`${dataPath}/${key}/color`] = '#dbeafe';
                 collected++;
             }
 
@@ -675,7 +684,8 @@
             const username = currentCollectorUser;
             if (!confirm(`Remove collected color (reset to white) and clear status for all rows in user "${username}"?`)) return;
             
-            const snapData = await db.ref('data/' + username).once('value');
+            const dataPath = `data/${username}/facebook`;
+            const snapData = await db.ref(dataPath).once('value');
             const data = snapData.val() || {};
             const keys = Object.keys(data);
             if (keys.length === 0) {
@@ -683,9 +693,10 @@
                 return;
             }
             let updates = {};
+            if (currentTab === username) saveHistory();
             keys.forEach(key => {
-                updates[`data/${username}/${key}/color`] = '#ffffff';
-                updates[`data/${username}/${key}/status`] = '';
+                updates[`${dataPath}/${key}/color`] = '#ffffff';
+                updates[`${dataPath}/${key}/status`] = '';
             });
             await db.ref().update(updates);
             showToast(`Colors and status reset for user "${username}".`);
@@ -703,24 +714,37 @@
                     html += `<div class="tab ${c.key===currentTab?'active':''}" onclick="changeUser('${c.key}')">${c.key}</div>`;
                 });
                 document.getElementById('tabs').innerHTML = html;
-                if (currentTab) fetchTableData();
+                if (currentTab) {
+                    fetchTableData();
+                    loadBackups();
+                }
                 updateStats();
             });
         }
 
         function changeUser(name) {
             if (currentTab !== name) {
-                db.ref('data/' + currentTab).off();
+                if (dataRef) {
+                    dataRef.off();
+                    dataRef = null;
+                }
                 currentTab = name;
                 resetSelection();
+                historyStack = [];
+                redoStack = [];
+                document.querySelectorAll('#tabs .tab').forEach(el => {
+                    el.classList.toggle('active', el.innerText === name);
+                });
                 fetchTableData();
                 loadBackups();
-                loadTabs();
             }
         }
 
         function fetchTableData() {
-            db.ref('data/' + currentTab).on('value', snap => {
+            if (!currentTab) return;
+            if (dataRef) dataRef.off();
+            dataRef = db.ref(`data/${currentTab}/facebook`);
+            dataRef.on('value', snap => {
                 localData = snap.val() || {};
                 rowKeys = Object.keys(localData);
                 renderTable();
@@ -732,19 +756,20 @@
             let html = '';
             rowKeys.forEach((key, idx) => {
                 let r = localData[key];
-                let bgColor = r.color || '#ffffff';
+                let bgColor = safeColor(r.color);
                 html += `<tr style="background-color:${bgColor};">
                     <td>${idx+1}</td>
                     ${['uid','pass','tfa','cookie','fullMail','status','color'].map(f => {
                         let isSel = selectedSet.has(`${key}|${f}`);
                         let cellContent = r[f] || '';
+                        let safeContent = escapeHtml(cellContent);
                         if (f === 'fullMail') {
-                            return `<td class="${isSel?'cell-selected':''} mail-cell" title="${cellContent}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','${f}')">
-                                <input class="edit-cell" value="${cellContent}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
+                            return `<td class="${isSel?'cell-selected':''} mail-cell" title="${safeContent}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','${f}')">
+                                <input class="edit-cell" value="${safeContent}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
                             </td>`;
                         } else {
                             return `<td class="${isSel?'cell-selected':''}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','${f}')">
-                                <input class="edit-cell" value="${cellContent}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
+                                <input class="edit-cell" value="${safeContent}" onchange="saveEdit('${key}','${f}',this.value)" onfocus="this.parentElement.click()">
                             </td>`;
                         }
                     }).join('')}
@@ -756,10 +781,26 @@
         }
 
         function saveEdit(id, f, v) {
-            db.ref(`data/${currentTab}/${id}`).update({ [f]: v }).then(() => {
+            saveHistory();
+            db.ref(`data/${currentTab}/facebook/${id}`).update({ [f]: v }).then(() => {
                 showToast('Saved');
-                archiveToGS(localData[id]);
+                archiveToGS({ ...(localData[id] || {}), [f]: v });
             });
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function safeColor(value) {
+            const color = String(value || '');
+            return /^#[0-9a-f]{3,8}$/i.test(color) ? color : '#ffffff';
         }
 
         function archiveToGS(data) {
@@ -818,22 +859,24 @@
 
         async function clearSelectedCells() {
             if (!confirm('Clear selected cells?')) return;
+            saveHistory();
             let ups = {};
             for (let item of selectedSet) {
                 let [k, f] = item.split('|');
                 await backupRow(k);
-                ups[`data/${currentTab}/${k}/${f}`] = '';
+                ups[`data/${currentTab}/facebook/${k}/${f}`] = '';
             }
             db.ref().update(ups).then(resetSelection);
         }
 
         async function deleteSelectedRows() {
             if (!confirm('Delete selected rows?')) return;
+            saveHistory();
             let rows = new Set();
             selectedSet.forEach(item => rows.add(item.split('|')[0]));
             for (let k of rows) {
                 await backupRow(k);
-                db.ref(`data/${currentTab}/${k}`).remove();
+                db.ref(`data/${currentTab}/facebook/${k}`).remove();
             }
             showToast('Deleted');
             resetSelection();
@@ -841,8 +884,9 @@
 
         async function deleteSingleRow(key) {
             if (!confirm('Delete this row?')) return;
+            saveHistory();
             await backupRow(key);
-            db.ref(`data/${currentTab}/${key}`).remove();
+            db.ref(`data/${currentTab}/facebook/${key}`).remove();
             showToast('Row deleted');
         }
 
@@ -858,22 +902,25 @@
         async function backupRow(key) {
             const r = localData[key];
             if (!r) return;
-            await db.ref(`backups/${currentTab}/${Date.now()}`).set(r);
+            await db.ref(`backups/${currentTab}/facebook/${Date.now()}`).set(r);
         }
 
         function loadBackups() {
-            db.ref('backups/' + currentTab).limitToLast(8).on('value', snap => {
+            if (backupRef) backupRef.off();
+            backupRef = db.ref(`backups/${currentTab}/facebook`);
+            backupRef.limitToLast(8).on('value', snap => {
                 let h = '';
                 snap.forEach(c => {
-                    h += `<tr style="background:#fef9f0;"><td>${new Date(parseInt(c.key)).toLocaleString()}</td><td>${c.val().fullMail||'Data'}</td><td><button class="btn" style="background:green;padding:2px 12px;" onclick="restore('${c.key}')">Restore</button></td></tr>`;
+                    h += `<tr style="background:#fef9f0;"><td>${new Date(parseInt(c.key)).toLocaleString()}</td><td>${escapeHtml(c.val().fullMail || 'Data')}</td><td><button class="btn" style="background:green;padding:2px 12px;" onclick="restore('${c.key}')">Restore</button></td></tr>`;
                 });
                 document.getElementById('backup-body').innerHTML = h;
             });
         }
 
         function restore(id) {
-            db.ref(`backups/${currentTab}/${id}`).once('value', s => {
-                db.ref(`data/${currentTab}`).push(s.val()).then(() => db.ref(`backups/${currentTab}/${id}`).remove());
+            saveHistory();
+            db.ref(`backups/${currentTab}/facebook/${id}`).once('value', s => {
+                db.ref(`data/${currentTab}/facebook`).push(s.val()).then(() => db.ref(`backups/${currentTab}/facebook/${id}`).remove());
             });
         }
 
@@ -888,7 +935,7 @@
             const name = prompt('Full name (optional):') || username;
             const hashed = btoa(password + 'salt');
             await db.ref('users/' + username).set({ name, password: hashed, approved: true, role: 'user' });
-            await db.ref('data/' + username).set({});
+            await db.ref(`data/${username}/facebook`).set({});
             alert(`User "${username}" created.`);
             loadTabs();
             loadUserLists();
@@ -898,12 +945,17 @@
         function deleteCurrentUser() {
             let n = prompt(`To delete "${currentTab}", type the name:`);
             if (n === currentTab) {
-                db.ref('users/'+n).remove().then(() => { db.ref('data/'+n).remove(); location.reload(); });
+                db.ref('users/'+n).remove().then(() => {
+                    db.ref(`data/${n}/facebook`).remove();
+                    db.ref(`backups/${n}/facebook`).remove();
+                    location.reload();
+                });
             }
         }
 
         function addRow() {
-            db.ref(`data/${currentTab}`).push({ uid: '', pass: '', tfa: '', cookie: '', fullMail: '', status: '', color: '#ffffff' });
+            saveHistory();
+            db.ref(`data/${currentTab}/facebook`).push({ uid: '', pass: '', tfa: '', cookie: '', fullMail: '', status: '', color: '#ffffff' });
         }
 
         // ===== PENDING APPROVALS =====
@@ -939,17 +991,23 @@
         }
 
         // ===== UNDO / REDO =====
+        function saveHistory() {
+            if (!currentTab) return;
+            historyStack.push(JSON.parse(JSON.stringify(localData)));
+            redoStack = [];
+        }
+
         window.undoAction = async function() {
             if (historyStack.length) {
                 redoStack.push(JSON.parse(JSON.stringify(localData)));
-                await db.ref(`data/${currentTab}`).set(historyStack.pop());
+                await db.ref(`data/${currentTab}/facebook`).set(historyStack.pop());
                 showToast('Undo');
             }
         };
         window.redoAction = async function() {
             if (redoStack.length) {
                 historyStack.push(JSON.parse(JSON.stringify(localData)));
-                await db.ref(`data/${currentTab}`).set(redoStack.pop());
+                await db.ref(`data/${currentTab}/facebook`).set(redoStack.pop());
                 showToast('Redo');
             }
         };

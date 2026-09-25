@@ -154,13 +154,13 @@
         .user-select-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
         .user-select-item {
             padding: 6px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 40px;
-            cursor: pointer; font-size: 12px; transition: 0.15s;
+            cursor: pointer; font-size: 12px; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px;
         }
         .user-select-item.active { background: var(--primary); color: white; border-color: var(--primary); }
         .user-select-item:hover { transform: scale(0.95); }
 
         .tab-bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; }
-        .tab { padding: 8px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 40px; cursor: pointer; font-size: 13px; white-space: nowrap; transition: 0.15s; }
+        .tab { padding: 8px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 40px; cursor: pointer; font-size: 13px; white-space: nowrap; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
         .tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 8px rgba(15,157,88,0.25); }
 
         .sheet-box { background: var(--card); border-radius: var(--radius); overflow: auto; border: 1px solid var(--border); height: calc(100vh - 480px); min-height: 300px; }
@@ -229,11 +229,57 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        /* ===== VERIFIED BADGE UI STYLES ===== */
+        .verified-icon {
+            color: #1d9bf0;
+            font-size: 14px;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .user-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ===== BROADCAST MODAL STYLES ===== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: none;
+            justify-content: center; align-items: center; z-index: 4000;
+        }
+        .modal-card {
+            background: var(--card); border-radius: var(--radius);
+            padding: 20px; width: 90%; max-width: 500px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3); border: 1px solid var(--border);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .modal-title { font-size: 16px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .close-btn { cursor: pointer; font-size: 18px; color: #64748b; }
     </style>
 </head>
 <body>
     <div id="loading-screen"><i class="fa-solid fa-spinner fa-pulse"></i> Loading Admin Panel...</div>
     <div id="toast">✔ Done</div>
+
+    <!-- Broadcast Modal -->
+    <div id="broadcastModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fa-solid fa-bullhorn"></i> Send Broadcast Message</div>
+                <i class="fa-solid fa-xmark close-btn" onclick="toggleBroadcastModal(false)"></i>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <textarea id="broadcastMessage" class="input-f" style="height: 100px; resize: vertical;" placeholder="Type message for all users..."></textarea>
+                <div>
+                    <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Upload Image (Optional):</label>
+                    <input type="file" id="broadcastImage" accept="image/*" class="input-f" style="width: 100%;">
+                </div>
+                <button class="btn" style="width: 100%; margin-top: 8px;" onclick="sendBroadcast()"><i class="fa-solid fa-paper-plane"></i> Broadcast Now</button>
+            </div>
+        </div>
+    </div>
 
     <div id="app-content">
         <div class="container">
@@ -245,6 +291,7 @@
                     <button class="btn btn-sm" style="background:#1a73e8;" onclick="addRow()"><i class="fa-solid fa-plus"></i> Add Row</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteCurrentUser()"><i class="fa-solid fa-user-minus"></i> Delete User</button>
                     <button class="btn btn-sm btn-outline" onclick="toggleTheme()"><i class="fa-regular fa-circle-half-stroke"></i></button>
+                    <button class="btn btn-sm btn-outline" onclick="toggleBroadcastModal(true)"><i class="fa-solid fa-bullhorn"></i> Broadcast</button>
                 </div>
             </div>
 
@@ -254,6 +301,7 @@
                 <div class="tab-btn" data-target="section-bulk"><i class="fa-solid fa-upload"></i> Bulk Import</div>
                 <div class="tab-btn" data-target="section-collector"><i class="fa-solid fa-database"></i> Smart Collector</div>
                 <div class="tab-btn" data-target="section-data"><i class="fa-solid fa-table"></i> Data Management</div>
+                <div class="tab-btn" data-target="section-verified"><i class="fa-solid fa-circle-check"></i> Verified Badge Settings</div>
             </div>
 
             <!-- ===== SECTION: DASHBOARD ===== -->
@@ -385,6 +433,28 @@
                 </div>
             </div>
 
+            <!-- ===== SECTION: VERIFIED BADGE SETTINGS ===== -->
+            <div id="section-verified" class="section-panel">
+                <div class="tool-card">
+                    <div class="tool-title"><i class="fa-solid fa-user-check"></i> Manage User Verified Badges</div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">#</th>
+                                    <th style="text-align: left; padding-left: 15px;">User</th>
+                                    <th>Verified Badge</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verified-users-body">
+                                <tr><td colspan="4" style="padding:15px; color:#64748b;">Loading Users...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -427,6 +497,57 @@
         let collectorRef = null;
         let dataRef = null;
         let backupRef = null;
+        let globalUsersData = {};
+
+        // ===== HELPER: USER HTML WITH BADGE =====
+        function getUserDisplayHtml(username) {
+            const u = globalUsersData[username] || {};
+            const verifiedHtml = u.isVerified ? '<i class="fa-solid fa-circle-check verified-icon" title="Verified"></i>' : '';
+            return `<span class="user-display">
+                <span>${escapeHtml(username)}</span>
+                ${verifiedHtml}
+            </span>`;
+        }
+
+        // ===== BROADCAST FUNCTIONS =====
+        function toggleBroadcastModal(show) {
+            document.getElementById('broadcastModal').style.display = show ? 'flex' : 'none';
+        }
+
+        async function sendBroadcast() {
+            const msg = document.getElementById('broadcastMessage').value.trim();
+            const fileInput = document.getElementById('broadcastImage');
+            const file = fileInput.files[0];
+
+            if (!msg && !file) {
+                alert('Please enter a message or select an image.');
+                return;
+            }
+
+            let imageUrl = '';
+            if (file) {
+                imageUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            const broadcastData = {
+                message: msg,
+                image: imageUrl,
+                timestamp: Date.now()
+            };
+
+            db.ref('broadcasts').push(broadcastData).then(() => {
+                showToast('Broadcast sent to all users!');
+                document.getElementById('broadcastMessage').value = '';
+                fileInput.value = '';
+                toggleBroadcastModal(false);
+            }).catch(err => {
+                alert('Error sending broadcast: ' + err.message);
+            });
+        }
 
         // ===== TAB NAVIGATION =====
         document.addEventListener('DOMContentLoaded', function() {
@@ -440,6 +561,8 @@
                     if (target) target.classList.add('active');
                     if (this.dataset.target === 'section-collector') {
                         loadCollectorUserTabs();
+                    } else if (this.dataset.target === 'section-verified') {
+                        renderVerifiedUserList();
                     }
                 });
             });
@@ -447,6 +570,7 @@
 
         // ===== INIT =====
         function init() {
+            listenGlobalUsers();
             loadPendingUsers();
             loadAutoApproveStatus();
             loadTabs();
@@ -454,6 +578,56 @@
             loadUserLists();
             setTimeout(loadCollectorUserTabs, 500);
             document.getElementById('loading-screen').style.display = 'none';
+        }
+
+        // ===== LISTEN TO GLOBAL USERS DATA FOR BADGES =====
+        function listenGlobalUsers() {
+            db.ref('users').on('value', snap => {
+                globalUsersData = snap.val() || {};
+                renderVerifiedUserList();
+                loadUserLists();
+                loadCollectorUserTabs();
+                loadTabs();
+            });
+        }
+
+        // ===== VERIFIED BADGE SECTION MANAGEMENT =====
+        function renderVerifiedUserList() {
+            const tbody = document.getElementById('verified-users-body');
+            if (!tbody) return;
+            
+            let html = '', idx = 1;
+            Object.keys(globalUsersData).forEach(username => {
+                const user = globalUsersData[username];
+                if (user.role === 'admin') return;
+
+                const isChecked = user.isVerified ? 'checked' : '';
+
+                html += `<tr>
+                    <td>${idx++}</td>
+                    <td style="text-align:left; padding-left:15px;">
+                        ${getUserDisplayHtml(username)}
+                    </td>
+                    <td>
+                        <label class="switch">
+                            <input type="checkbox" id="verify-check-${username}" ${isChecked}>
+                            <span class="slider round"></span>
+                        </label>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm" onclick="saveUserVerification('${username}')"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="4" style="padding:15px; color:#64748b;">No users found</td></tr>';
+        }
+
+        function saveUserVerification(username) {
+            const isChecked = document.getElementById(`verify-check-${username}`).checked;
+            db.ref(`users/${username}/isVerified`).set(isChecked).then(() => {
+                showToast(isChecked ? `${username} Verified!` : `${username} Unverified!`);
+            });
         }
 
         // ===== AUTO APPROVE TOGGLE =====
@@ -472,29 +646,27 @@
 
         // ===== LOAD USER LISTS FOR BULK =====
         function loadUserLists() {
-            db.ref('users').on('value', snap => {
-                let users = [];
-                snap.forEach(c => {
-                    const user = c.val();
-                    if (user.role !== 'admin') {
-                        users.push({ username: c.key, name: user.name || c.key, approved: user.approved });
-                    }
-                });
-                users.sort((a,b) => a.username.localeCompare(b.username));
-
-                let bulkHtml = '';
-                users.forEach(u => {
-                    const active = (u.username === bulkTargetUser) ? 'active' : '';
-                    bulkHtml += `<div class="user-select-item ${active}" onclick="setBulkTarget('${u.username}')">${u.username}</div>`;
-                });
-                document.getElementById('bulkUserList').innerHTML = bulkHtml || '<span style="color:#64748b;">No users found</span>';
+            let users = [];
+            Object.keys(globalUsersData).forEach(key => {
+                const user = globalUsersData[key];
+                if (user.role !== 'admin') {
+                    users.push({ username: key, name: user.name || key, approved: user.approved });
+                }
             });
+            users.sort((a,b) => a.username.localeCompare(b.username));
+
+            let bulkHtml = '';
+            users.forEach(u => {
+                const active = (u.username === bulkTargetUser) ? 'active' : '';
+                bulkHtml += `<div class="user-select-item ${active}" onclick="setBulkTarget('${u.username}')">${getUserDisplayHtml(u.username)}</div>`;
+            });
+            document.getElementById('bulkUserList').innerHTML = bulkHtml || '<span style="color:#64748b;">No users found</span>';
         }
 
         function setBulkTarget(username) {
             bulkTargetUser = username;
             document.querySelectorAll('#bulkUserList .user-select-item').forEach(el => {
-                el.classList.toggle('active', el.innerText === username);
+                el.classList.toggle('active', el.innerText.trim() === username);
             });
         }
 
@@ -538,27 +710,25 @@
 
         // ===== SMART COLLECTOR USER TABS =====
         function loadCollectorUserTabs() {
-            db.ref('users').once('value', snap => {
-                let users = [];
-                snap.forEach(c => {
-                    const user = c.val();
-                    if (user.role !== 'admin') {
-                        users.push(c.key);
-                    }
-                });
-                users.sort();
-                let html = '';
-                users.forEach(username => {
-                    const active = (username === currentCollectorUser) ? 'active' : '';
-                    html += `<div class="tab ${active}" onclick="switchCollectorUser('${username}')">${username}</div>`;
-                });
-                document.getElementById('collectorUserTabs').innerHTML = html || '<div style="color:#64748b;padding:8px;">No users</div>';
-                if (!currentCollectorUser && users.length > 0) {
-                    switchCollectorUser(users[0]);
-                } else if (currentCollectorUser) {
-                    switchCollectorUser(currentCollectorUser);
+            let users = [];
+            Object.keys(globalUsersData).forEach(key => {
+                const user = globalUsersData[key];
+                if (user.role !== 'admin') {
+                    users.push(key);
                 }
             });
+            users.sort();
+            let html = '';
+            users.forEach(username => {
+                const active = (username === currentCollectorUser) ? 'active' : '';
+                html += `<div class="tab ${active}" onclick="switchCollectorUser('${username}')">${getUserDisplayHtml(username)}</div>`;
+            });
+            document.getElementById('collectorUserTabs').innerHTML = html || '<div style="color:#64748b;padding:8px;">No users</div>';
+            if (!currentCollectorUser && users.length > 0) {
+                switchCollectorUser(users[0]);
+            } else if (currentCollectorUser) {
+                switchCollectorUser(currentCollectorUser);
+            }
         }
 
         function switchCollectorUser(username) {
@@ -568,7 +738,7 @@
             }
             currentCollectorUser = username;
             document.querySelectorAll('#collectorUserTabs .tab').forEach(el => {
-                el.classList.toggle('active', el.innerText === username);
+                el.classList.toggle('active', el.innerText.trim() === username);
             });
             const ref = db.ref(`data/${username}/facebook`);
             collectorRef = ref;
@@ -705,21 +875,19 @@
 
         // ===== DATA MANAGEMENT FUNCTIONS =====
         function loadTabs() {
-            db.ref('users').on('value', snap => {
-                let html = '';
-                snap.forEach(c => {
-                    const user = c.val();
-                    if (user.role === 'admin') return;
-                    if (!currentTab) currentTab = c.key;
-                    html += `<div class="tab ${c.key===currentTab?'active':''}" onclick="changeUser('${c.key}')">${c.key}</div>`;
-                });
-                document.getElementById('tabs').innerHTML = html;
-                if (currentTab) {
-                    fetchTableData();
-                    loadBackups();
-                }
-                updateStats();
+            let html = '';
+            Object.keys(globalUsersData).forEach(key => {
+                const user = globalUsersData[key];
+                if (user.role === 'admin') return;
+                if (!currentTab) currentTab = key;
+                html += `<div class="tab ${key===currentTab?'active':''}" onclick="changeUser('${key}')">${getUserDisplayHtml(key)}</div>`;
             });
+            document.getElementById('tabs').innerHTML = html;
+            if (currentTab) {
+                fetchTableData();
+                loadBackups();
+            }
+            updateStats();
         }
 
         function changeUser(name) {
@@ -733,7 +901,7 @@
                 historyStack = [];
                 redoStack = [];
                 document.querySelectorAll('#tabs .tab').forEach(el => {
-                    el.classList.toggle('active', el.innerText === name);
+                    el.classList.toggle('active', el.innerText.trim() === name);
                 });
                 fetchTableData();
                 loadBackups();
@@ -760,7 +928,7 @@
                 html += `<tr style="background-color:${bgColor};">
                     <td>${idx+1}</td>
                     ${['uid','pass','tfa','cookie','fullMail','status','color'].map(f => {
-                        let isSel = selectedSet.has(`${key}|${f}`);
+                        let isSel = selectedSet.has(`${key}\vert{}${f}`);
                         let cellContent = r[f] || '';
                         let safeContent = escapeHtml(cellContent);
                         if (f === 'fullMail') {
@@ -934,12 +1102,9 @@
             if (!password) { alert('Password required.'); return; }
             const name = prompt('Full name (optional):') || username;
             const hashed = btoa(password + 'salt');
-            await db.ref('users/' + username).set({ name, password: hashed, approved: true, role: 'user' });
+            await db.ref('users/' + username).set({ name, password: hashed, approved: true, role: 'user', isVerified: false });
             await db.ref(`data/${username}/facebook`).set({});
             alert(`User "${username}" created.`);
-            loadTabs();
-            loadUserLists();
-            loadCollectorUserTabs();
         }
 
         function deleteCurrentUser() {
@@ -966,7 +1131,7 @@
                     const user = c.val();
                     if (user.approved === false && user.role !== 'admin') {
                         count++;
-                        html += `<tr><td>${c.key}</td><td>${user.name||''}</td><td><button class="btn" style="background:#0f9d58;padding:4px 16px;" onclick="approveUser('${c.key}')">Approve</button></td></tr>`;
+                        html += `<tr><td>${getUserDisplayHtml(c.key)}</td><td>${user.name||''}</td><td><button class="btn" style="background:#0f9d58;padding:4px 16px;" onclick="approveUser('${c.key}')">Approve</button></td></tr>`;
                     }
                 });
                 document.getElementById('pending-users-body').innerHTML = html || '<tr><td colspan="3">No pending</td></tr>';

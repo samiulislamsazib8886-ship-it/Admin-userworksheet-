@@ -164,36 +164,21 @@
         .tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 8px rgba(15,157,88,0.25); }
 
         .sheet-box { background: var(--card); border-radius: var(--radius); overflow: auto; border: 1px solid var(--border); height: calc(100vh - 480px); min-height: 300px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
         th, td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         th { background: #f8fafc; color: #1e293b; font-weight: 600; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border); }
-        td:first-child, th:first-child { position: sticky; left: 0; z-index: 11; background: var(--card); width: 30px; border-right: 2px solid var(--border); }
-        .edit-cell { width: 100%; height: 100%; border: none; padding: 2px 4px; font-size: 12px; background: transparent; outline: none; }
+        td:first-child, th:first-child { position: sticky; left: 0; z-index: 11; background: var(--card); width: 35px; border-right: 2px solid var(--border); }
+        .edit-cell { width: 100%; height: 100%; border: none; padding: 2px 4px; font-size: 11.5px; background: transparent; outline: none; }
         .edit-cell:focus { background: white; box-shadow: inset 0 0 0 2px var(--primary); }
         td.cell-selected { background: rgba(15,157,88,0.2) !important; border: 1.5px solid var(--primary) !important; }
 
         .mail-cell {
-            max-width: 160px;
+            max-width: 140px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             cursor: default;
         }
-        .mail-cell:hover {
-            white-space: normal;
-            word-break: break-all;
-            overflow: visible;
-            background: var(--card);
-            position: relative;
-            z-index: 20;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            border-radius: 4px;
-            padding: 4px 8px;
-            max-width: 300px;
-        }
-
-        .backup-area { margin-top: 16px; background: #fef9f0; border-radius: var(--radius); padding: 12px; border: 1px solid #fde68a; }
-        .backup-title { font-size: 13px; font-weight: 600; color: #b45309; margin-bottom: 6px; }
 
         #context-menu {
             position: fixed; background: var(--card); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.2);
@@ -212,23 +197,17 @@
 
         .collector-table {
             table-layout: fixed;
-            min-width: 800px;
+            min-width: 900px;
         }
-        .collector-table th:nth-child(1) { width: 30px; }
-        .collector-table th:nth-child(2) { width: 130px; }
-        .collector-table th:nth-child(3) { width: 120px; }
-        .collector-table th:nth-child(4) { width: 120px; }
-        .collector-table th:nth-child(5) { width: 140px; }
-        .collector-table th:nth-child(6) { width: 160px; }
-        .collector-table th:nth-child(7) { width: 100px; }
+        .collector-table th:nth-child(1) { width: 35px; }
+        .collector-table th:nth-child(2) { width: 90px; }
+        .collector-table th:nth-child(3) { width: 90px; }
+        .collector-table th:nth-child(4) { width: 90px; }
+        .collector-table th:nth-child(5) { width: 90px; }
+        .collector-table th:nth-child(6) { width: 100px; }
+        .collector-table th:nth-child(7) { width: 140px; }
+        .collector-table th:nth-child(8) { width: 80px; }
         .collector-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .collector-table td:nth-child(6) { max-width: 160px; }
-        .collector-table .mail-cell {
-            max-width: 160px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
 
         /* ===== VERIFIED BADGE UI STYLES ===== */
         .verified-icon {
@@ -365,8 +344,8 @@
                         <input type="number" id="cFrom" class="input-f" placeholder="From row" style="width:70px;" value="1">
                         <input type="number" id="cTo" class="input-f" placeholder="To row" style="width:70px;" value="10">
                         <select id="exportFormat" class="input-f" style="flex:1;">
-                            <option value="simple">UID | PASS | COOKIE | MAIL</option>
-                            <option value="full">UID | PASS | 2FA | COOKIE | MAIL</option>
+                            <option value="simple">UID | USERNAME | PASS | COOKIE | MAIL</option>
+                            <option value="full">UID | USERNAME | PASS | 2FA | COOKIE | MAIL</option>
                         </select>
                         <button class="btn" style="background:#4f46e5;" onclick="collectAutoRange()"><i class="fa-solid fa-plus"></i> Collect</button>
                     </div>
@@ -386,6 +365,7 @@
                         <thead><tr>
                             <th>#</th>
                             <th>UID</th>
+                            <th>Username</th>
                             <th>Pass</th>
                             <th>2FA</th>
                             <th>Cookie</th>
@@ -408,28 +388,21 @@
                 </div>
                 <div class="tab-bar" id="tabs"></div>
                 <div class="sheet-box">
-                    <table id="main-table">
+                    <table id="main-table" style="table-layout: auto; min-width: 950px;">
                         <thead><tr>
-                            <th>#</th>
-                            <th style="width:130px;">UID</th>
-                            <th style="width:120px;">Pass</th>
-                            <th style="width:120px;">2FA</th>
-                            <th style="width:140px;">Cookie</th>
-                            <th style="width:160px;">Full Mail</th>
-                            <th style="width:100px;">Status</th>
-                            <th style="width:70px;">Color</th>
-                            <th style="width:40px;">X</th>
+                            <th style="width: 35px;">#</th>
+                            <th style="width: 90px;">UID</th>
+                            <th style="width: 90px;">Username</th>
+                            <th style="width: 90px;">Pass</th>
+                            <th style="width: 90px;">2FA</th>
+                            <th style="width: 100px;">Cookie</th>
+                            <th style="width: 140px;">Full Mail</th>
+                            <th style="width: 80px;">Status</th>
+                            <th style="width: 60px;">Color</th>
+                            <th style="width: 40px;">X</th>
                         </tr></thead>
                         <tbody id="sheet-body"></tbody>
                     </table>
-                </div>
-                <div class="backup-area">
-                    <div class="backup-title"><i class="fa-solid fa-clock-rotate-left"></i> Recovery Bin (last 8)</div>
-                    <div style="overflow-x:auto; max-height:90px;">
-                        <table style="min-width:600px;">
-                            <tbody id="backup-body"></tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
 
@@ -480,7 +453,7 @@
             measurementId: "G-3FN4MJZ118"
         };
         const FORM_SYNC_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfeDglY6zK6GgaLiY6iliGxHoXwGJeAYCAogMrIazpcKVuSCQ/formResponse";
-        const FORM_ENTRIES = { uid: "entry.2103578011", pass: "entry.862857244", tfa: "entry.650662198", cookie: "entry.846810001", mail: "entry.2057161853" };
+        const FORM_ENTRIES = { uid: "entry.2103578011", username: "entry.username_placeholder", pass: "entry.862857244", tfa: "entry.650662198", cookie: "entry.846810001", mail: "entry.2057161853" };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -496,7 +469,6 @@
         let currentCollectorUser = "";
         let collectorRef = null;
         let dataRef = null;
-        let backupRef = null;
         let globalUsersData = {};
 
         // ===== HELPER: USER HTML WITH BADGE =====
@@ -696,6 +668,7 @@
                 let k = (target < targetKeys.length) ? targetKeys[target] : db.ref(dataPath).push().key;
                 let obj = {
                     ...(targetData[k] || {}),
+                    username: bulkTargetUser,
                     fullMail: l.trim()
                 };
                 ups[`${dataPath}/${k}`] = obj;
@@ -753,16 +726,18 @@
             const tbody = document.getElementById('collectorTableBody');
             if (!tbody) return;
             if (keys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="padding:20px; color:#64748b;">No data rows</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="padding:20px; color:#64748b;">No data rows</td></tr>';
                 return;
             }
             let html = '';
             keys.forEach((key, idx) => {
                 const row = data[key];
                 const bgColor = safeColor(row.color);
+                const rowUsername = row.username || '';
                 html += `<tr style="background-color:${bgColor};">
                     <td>${idx+1}</td>
                     <td>${escapeHtml(row.uid)}</td>
+                    <td>${escapeHtml(rowUsername)}</td>
                     <td>${escapeHtml(row.pass)}</td>
                     <td>${escapeHtml(row.tfa)}</td>
                     <td>${escapeHtml(row.cookie)}</td>
@@ -813,11 +788,12 @@
                 const key = allKeys[i];
                 const row = data[key];
                 if (!row) continue;
+                const rowUsername = row.username || '';
                 let entry;
                 if (fmt === 'simple') {
-                    entry = { "UID": row.uid || '', "PASS": row.pass || '', "COOKIE": row.cookie || '', "MAIL": row.fullMail || '' };
+                    entry = { "UID": row.uid || '', "USERNAME": rowUsername, "PASS": row.pass || '', "COOKIE": row.cookie || '', "MAIL": row.fullMail || '' };
                 } else {
-                    entry = { "UID": row.uid || '', "PASS": row.pass || '', "2FA": row.tfa || '', "COOKIE": row.cookie || '', "MAIL": row.fullMail || '' };
+                    entry = { "UID": row.uid || '', "USERNAME": rowUsername, "PASS": row.pass || '', "2FA": row.tfa || '', "COOKIE": row.cookie || '', "MAIL": row.fullMail || '' };
                 }
                 masterPool.push(entry);
                 updates[`${dataPath}/${key}/status`] = dateStr;
@@ -835,14 +811,20 @@
             showToast(`Collected ${collected} rows from ${username}.`);
         }
 
-        // ===== DOWNLOAD EXCEL =====
+        // ===== DOWNLOAD MASTER EXCEL DIRECTLY =====
         function downloadMasterExcel() {
             if (!masterPool.length) return alert('Pool empty');
+            
             const ws = XLSX.utils.json_to_sheet(masterPool);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Collection');
-            XLSX.writeFile(wb, `Report_${Date.now()}.xlsx`);
-            if (confirm('Clear pool?')) { masterPool = []; document.getElementById('poolCounter').innerText = 'Pool: 0'; }
+            
+            XLSX.writeFile(wb, `SmartCollector_Report_${Date.now()}.xlsx`);
+            
+            if (confirm('Clear pool?')) { 
+                masterPool = []; 
+                document.getElementById('poolCounter').innerText = 'Pool: 0'; 
+            }
         }
 
         // ===== RESET COLLECTED COLORS (only for current user) =====
@@ -885,7 +867,6 @@
             document.getElementById('tabs').innerHTML = html;
             if (currentTab) {
                 fetchTableData();
-                loadBackups();
             }
             updateStats();
         }
@@ -904,7 +885,6 @@
                     el.classList.toggle('active', el.innerText.trim() === name);
                 });
                 fetchTableData();
-                loadBackups();
             }
         }
 
@@ -925,11 +905,12 @@
             rowKeys.forEach((key, idx) => {
                 let r = localData[key];
                 let bgColor = safeColor(r.color);
+                const rowUsername = r.username || '';
                 html += `<tr style="background-color:${bgColor};">
                     <td>${idx+1}</td>
-                    ${['uid','pass','tfa','cookie','fullMail','status','color'].map(f => {
-                        let isSel = selectedSet.has(`${key}\vert{}${f}`);
-                        let cellContent = r[f] || '';
+                    ${['uid','username','pass','tfa','cookie','fullMail','status','color'].map(f => {
+                        let isSel = selectedSet.has(`${key}|${f}`);
+                        let cellContent = (f === 'username') ? rowUsername : (r[f] || '');
                         let safeContent = escapeHtml(cellContent);
                         if (f === 'fullMail') {
                             return `<td class="${isSel?'cell-selected':''} mail-cell" title="${safeContent}" style="background-color:${bgColor};" onclick="handleCellClick(event,${idx},'${key}','${f}')">
@@ -977,6 +958,7 @@
             rows.forEach(row => {
                 const p = new URLSearchParams();
                 p.append(FORM_ENTRIES.uid, row.uid || '');
+                p.append(FORM_ENTRIES.username, row.username || '');
                 p.append(FORM_ENTRIES.pass, row.pass || '');
                 p.append(FORM_ENTRIES.tfa, row.tfa || '');
                 p.append(FORM_ENTRIES.cookie, row.cookie || '');
@@ -1000,7 +982,7 @@
 
         function applyRangeSelection(rE, fE) {
             selectedSet.clear();
-            const flds = ['uid', 'pass', 'tfa', 'cookie', 'fullMail', 'status', 'color'];
+            const flds = ['uid', 'username', 'pass', 'tfa', 'cookie', 'fullMail', 'status', 'color'];
             let fS = flds.indexOf(startPoint.f), fE2 = flds.indexOf(fE);
             let rS = Math.min(startPoint.r, rE), rEx = Math.max(startPoint.r, rE);
             let cS = Math.min(fS, fE2), cEx = Math.max(fS, fE2);
@@ -1019,7 +1001,8 @@
             let txt = '';
             selectedSet.forEach(item => {
                 let [k, f] = item.split('|');
-                txt += (localData[k][f] || '') + '\n';
+                let val = (f === 'username') ? (localData[k].username || '') : (localData[k][f] || '');
+                txt += val + '\n';
             });
             navigator.clipboard.writeText(txt.trim()).then(() => showToast('Copied!'));
             resetSelection();
@@ -1031,7 +1014,6 @@
             let ups = {};
             for (let item of selectedSet) {
                 let [k, f] = item.split('|');
-                await backupRow(k);
                 ups[`data/${currentTab}/facebook/${k}/${f}`] = '';
             }
             db.ref().update(ups).then(resetSelection);
@@ -1043,7 +1025,6 @@
             let rows = new Set();
             selectedSet.forEach(item => rows.add(item.split('|')[0]));
             for (let k of rows) {
-                await backupRow(k);
                 db.ref(`data/${currentTab}/facebook/${k}`).remove();
             }
             showToast('Deleted');
@@ -1053,7 +1034,6 @@
         async function deleteSingleRow(key) {
             if (!confirm('Delete this row?')) return;
             saveHistory();
-            await backupRow(key);
             db.ref(`data/${currentTab}/facebook/${key}`).remove();
             showToast('Row deleted');
         }
@@ -1065,32 +1045,6 @@
             m.style.top = Math.min(e.clientY, window.innerHeight - 300) + 'px';
         }
         function hideMenu() { document.getElementById('context-menu').style.display = 'none'; }
-
-        // ===== BACKUP =====
-        async function backupRow(key) {
-            const r = localData[key];
-            if (!r) return;
-            await db.ref(`backups/${currentTab}/facebook/${Date.now()}`).set(r);
-        }
-
-        function loadBackups() {
-            if (backupRef) backupRef.off();
-            backupRef = db.ref(`backups/${currentTab}/facebook`);
-            backupRef.limitToLast(8).on('value', snap => {
-                let h = '';
-                snap.forEach(c => {
-                    h += `<tr style="background:#fef9f0;"><td>${new Date(parseInt(c.key)).toLocaleString()}</td><td>${escapeHtml(c.val().fullMail || 'Data')}</td><td><button class="btn" style="background:green;padding:2px 12px;" onclick="restore('${c.key}')">Restore</button></td></tr>`;
-                });
-                document.getElementById('backup-body').innerHTML = h;
-            });
-        }
-
-        function restore(id) {
-            saveHistory();
-            db.ref(`backups/${currentTab}/facebook/${id}`).once('value', s => {
-                db.ref(`data/${currentTab}/facebook`).push(s.val()).then(() => db.ref(`backups/${currentTab}/facebook/${id}`).remove());
-            });
-        }
 
         // ===== USER MANAGEMENT =====
         async function addNewUser() {
@@ -1112,7 +1066,6 @@
             if (n === currentTab) {
                 db.ref('users/'+n).remove().then(() => {
                     db.ref(`data/${n}/facebook`).remove();
-                    db.ref(`backups/${n}/facebook`).remove();
                     location.reload();
                 });
             }
@@ -1120,7 +1073,7 @@
 
         function addRow() {
             saveHistory();
-            db.ref(`data/${currentTab}/facebook`).push({ uid: '', pass: '', tfa: '', cookie: '', fullMail: '', status: '', color: '#ffffff' });
+            db.ref(`data/${currentTab}/facebook`).push({ uid: '', username: '', pass: '', tfa: '', cookie: '', fullMail: '', status: '', color: '#ffffff' });
         }
 
         // ===== PENDING APPROVALS =====
@@ -1131,12 +1084,8 @@
                     const user = c.val();
                     if (user.approved === false && user.role !== 'admin') {
                         count++;
-                        html += `<tr><td>${getUserDisplayHtml(c.key)}</td><td>${user.name||''}</td><td><button class="btn" style="background:#0f9d58;padding:4px 16px;" onclick="approveUser('${c.key}')">Approve</button></td></tr>`;
                     }
                 });
-                document.getElementById('pending-users-body').innerHTML = html || '<tr><td colspan="3">No pending</td></tr>';
-                document.getElementById('pending-count').innerText = count;
-                document.getElementById('stat-pending').innerText = count;
             });
         }
 
